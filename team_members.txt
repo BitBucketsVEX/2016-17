@@ -1,0 +1,35 @@
+This file serves as a tutorial on basic Git workflow. It allows people to practice a 
+workflow without harming anything more important than this file.
+
+Git will allow sets of files to be considered as a complete configuration for easier
+identification of state; this differs from things like google drive, which allow recovery
+of individual file histories, but requires much effort to recover a state for a group of
+files.
+
+Following the instructions below, your task is to branch or fork the repository containing
+this file and add your name to this file in alphabetical order by last name along with an 
+alias and a date. Each new member of the team will do this and commit the file back for
+merging with the master branch.
+
+Only collaborators and the repository owner can modify the master branch (sometimes called
+a trunk). The master branch is always considered a deployable product, so it is bad form
+to edit and commit changes directly to the master branch.
+
+Instead users should (almost) always create a branch or fork.
+
+If you own a repository (or are listed as a collaborator) you can create branch, work in
+it, and commit changes without messing up the master branch. When you are satisfied that
+the changes are ready for review and incorporation into the master branch you will
+create a pull request (asking the collaborators to consider the update and merge it into
+the master branch.
+
+If you are not a collaborator, you will create a fork (look in the upper right corner of
+the web view of the repository) and make you changes from the fork. Notice that a fork
+also has a master branch and you can consider your workflow from there as well.
+
+
+Name						Alias					Date
+---------------------------------------------------------------------
+Kessel, Michael				RocketRedNeck			2016-07-11
+
+
