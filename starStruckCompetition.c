@@ -92,11 +92,11 @@
 
 */
 
-int driveSpeed = 0;//The forward drive speed.
-int turnCoef = 0;//The turning amount.
+int driveSpeed = 0; //The forward drive speed.
+int turnCoef = 0; //The turning amount.
 
 int const dt = 20;  // number of milliseconds per each control loop
-int const maxSteer = 50;  // percent of drive to apply to steering
+int const maxSteer = 50; // percent of drive to apply to steering
 
 
 int pusherNow = 0;
@@ -107,7 +107,7 @@ int pusherSpeed = 127;
 
 
 
-int linearize(int vel){
+int linearize(int vel) {
 	int pwm;
 	int linear[129] = {0, 0, 18, 18, 19, 19, 19, 19, 19, 19, 20, 20, 20, 20,
 		21, 21, 21, 21, 21, 21, 22, 22, 22, 22, 23, 23, 24, 24, 24, 25, 25, 25,
@@ -117,30 +117,28 @@ int linearize(int vel){
 		49, 49, 50, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 61, 62, 64, 65, 66,
 		67, 68, 69, 70, 72, 73, 75, 76, 77, 79, 81, 83, 84, 84, 85, 85, 86, 86,
 		87, 87, 88, 90, 96, 105, 105};
-	if(vel > 127) {vel = 127;}
-	if(vel < -127) {vel = -127;}
-	if (vel < 0){
+	if (vel > 127) { vel = 127; }
+	if (vel < -127) { vel = -127; }
+	if (vel < 0) {
 		pwm = -linear[-vel];
-		} else {
+	} else {
 		pwm = linear[vel];
 	}
 	return pwm;
 }
 
 int deadband(int vel) {
-	return (abs(vel) < 24) ? 0: vel;
+	return (abs(vel) < 24) ? 0 : vel;
 }
 
-task Drive_control
-{
-	while(true)
-	{
-		if(driveSpeed > 127) {driveSpeed = 127;}
-		if(driveSpeed < -127) {driveSpeed = -127;}
-		if(turnCoef > 127) {turnCoef = 127;}
-		if(turnCoef < -127) {turnCoef = -127;}
-		motor[frontLeft] = motor[frontLeft]  = linearize(driveSpeed + (maxSteer*turnCoef/100));
-		motor[frontRight] = motor[frontRight] = linearize(driveSpeed - (maxSteer*turnCoef/100));
+task Drive_control {
+	while (true) {
+		if (driveSpeed > 127) { driveSpeed = 127; }
+		if (driveSpeed < -127) { driveSpeed = -127; }
+		if (turnCoef > 127) { turnCoef = 127; }
+		if (turnCoef < -127) { turnCoef = -127; }
+		motor[frontLeft] = motor[frontLeft] = linearize(driveSpeed + (maxStee * turnCoef / 100));
+		motor[frontRight] = motor[frontRight] = linearize(driveSpeed - (maxSteer * turnCoef / 100));
 		wait1Msec(dt);
 	}
 }
@@ -188,20 +186,18 @@ task usercontrol() {
 		if (vexRT[Btn5DXmtr2] == 1) {
 			motor[pusher] = 0;
 			if (pusherNow < maxPusher) {
-				pusherBefore = pusherNow++; // set pusherBefore to pusherNow and add 1 to pusherNow
+				pusherNow++; // add 1 to pusherNow
 				motor[pusher] = pusherSpeed;
 			}
 			if (pusherNow == maxPusher) {
+				pusherNow--; // remove 1 from pusherNow
 				motor[pusher] = -pusherSpeed;
-				pusherBefore = pusherNow--;
 			}
 			if (pusherNow < pusherBefore && pusherNow > 0) {
+				pusherNow--; // remove 1 from pusherNow
 				motor[pusher] = -pusherSpeed;
-				pusherBefore = pusherNow--;
 			}
-			if (pusherNow < pusherBefore && pusherNow == 0) {
-				pusherBefore = pusherNow;
-			}
+			pusherBefore = pusherNow;
 		}
 	  sleep(20);
 	}
