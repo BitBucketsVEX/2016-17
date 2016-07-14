@@ -81,10 +81,11 @@ int const dt = 20;  // number of milliseconds per each control loop
 int const maxSteer = 50; // percent of drive to apply to steering
 
 
-int pusherNow = 0;
-int pusherBefore = 0;
-int maxPusher = 100;
+int pusher = 0;
+int pusherRetract = 0;
+int maxPusher = 75;
 int pusherSpeed = 127;
+int pusherOff = 5;
 
 
 
@@ -119,8 +120,8 @@ task Drive_control {
 		if (driveSpeed < -127) { driveSpeed = -127; }
 		if (turnCoef > 127) { turnCoef = 127; }
 		if (turnCoef < -127) { turnCoef = -127; }
-		motor[frontLeft] = motor[frontLeft] = linearize(driveSpeed + (maxSteer * turnCoef / 100));
-		motor[frontRight] = motor[frontRight] = linearize(driveSpeed - (maxSteer * turnCoef / 100));
+		motor[backLeft] = motor[frontLeft] = linearize(driveSpeed + (maxSteer * turnCoef / 100));
+		motor[backRight] = motor[frontRight] = linearize(driveSpeed - (maxSteer * turnCoef / 100));
 		wait1Msec(dt);
 	}
 }
@@ -165,24 +166,34 @@ task usercontrol() {
 	while (true) {
 		driveSpeed = deadband(vexRT[Ch3]);
 		turnCoef = deadband(vexRT[Ch1]);
-		if (vexRT[Btn5DXmtr2] == 1) {
-			motor[pusher1] = 0;
-			motor[pusher2] = 0;
-			if (pusherNow < maxPusher) {
-				pusherNow++; // add 1 to pusherNow
+		
+		// Pusher Code
+		
+		motor[pusher1] = 0;
+		motor[pusher2] = 0;
+		if (vexRT[Btn5D] == 1) {
+			if (pusher < maxPusher) {
+				pusher++; // add 1 to pusher
 				motor[pusher1] = pusherSpeed;
 			}
-			if (pusherNow == maxPusher) {
-				pusherNow--; // remove 1 from pusherNow
+		} else {
+			/* if (pusher == maxPusher || (pusher < pusherBefore && pusher > 0)) {
+				pusher--; // remove 1 from pusher
+				motor[pusher1] = -pusherSpeed;
+			} */
+			if (pusher >= maxPusher - pusherOff) {
+				pusherRetract = 1;
+			}
+			if (pusherRetract == 1) {
+				pusher--;
 				motor[pusher1] = -pusherSpeed;
 			}
-			if (pusherNow < pusherBefore && pusherNow > 0) {
-				pusherNow--; // remove 1 from pusherNow
-				motor[pusher1] = -pusherSpeed;
+			if (pusher == 0) {
+				pusherRetract = 0;
 			}
-			motor[pusher2] = motor[pusher1];
-			pusherBefore = pusherNow;
 		}
+		motor[pusher2] = motor[pusher1];
+		// pusherBefore = pusher;
 	  sleep(20);
 	}
 }
