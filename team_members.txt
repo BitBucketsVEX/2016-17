@@ -31,5 +31,6 @@ also has a master branch and you can consider your workflow from there as well.
 Name						      Alias					    Date
 --------------------------------------------------
 Beck, Howard          HenryTurkeyBrain  2016-08-06
+Boe, Jordan           Kamina1           2016-08-06
 Kessel, Ethan         RedNeckSideKick   2016-07-13
 Kessel, Michael				RocketRedNeck			2016-07-11
