@@ -83,9 +83,8 @@ int const maxSteer = 50; // percent of drive to apply to steering
 
 int pusher = 0;
 int pusherRetract = 0;
-int const MAX_PUSHER = 75;
+int const MAX_PUSHER = 61;
 int const PUSHER_SPEED = 127;
-int const PUSHER_OFF = 5;
 
 
 
@@ -170,24 +169,24 @@ task usercontrol() {
 		// Pusher Code
 
 		motor[pusher1] = 0;
-		motor[pusher2] = 0;
-		if (vexRT[Btn5D] == 1) {
-			if (pusher == 0) {
+		
+		if (pusher >= MAX_PUSHER) {
+			pusherRetract = 1;
+		}
+		if (pusherRetract == 1) {
+			pusher--;
+			motor[pusher1] = -PUSHER_SPEED;
+		}
+		if (pusher > 0 && pusherRetract == 0) {
+			pusher++;
+			motor[pusher1] = PUSHER_SPEED;
+		}
+		if (pusher == 0) {
+			if (vexRT[Btn5D] == 1) {
 				pusher++; // add 1 to pusher
 				motor[pusher1] = PUSHER_SPEED;
-				pusherRetract = 0;
 			}
-		} else {
-			if (pusher >= MAX_PUSHER - PUSHER_OFF) {
-				pusherRetract = 1;
-			}
-			if (pusherRetract == 1) {
-				pusher--;
-				motor[pusher1] = -PUSHER_SPEED;
-			}
-			if (pusher > 0 && pusherRetract == 0) {
-				pusher++;
-			}
+			pusherRetract = 0;
 		}
 		motor[pusher2] = motor[pusher1];
 		// pusherBefore = pusher;
