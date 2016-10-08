@@ -165,31 +165,7 @@ task usercontrol() {
 	while (true) {
 		driveSpeed = deadband(vexRT[Ch3]);
 		turnCoef = deadband(vexRT[Ch1]);
-
-		// Pusher Code
-
-		motor[pusher1] = 0;
 		
-		if (pusher >= MAX_PUSHER) {
-			pusherRetract = 1;
-		}
-		if (pusherRetract == 1) {
-			pusher--;
-			motor[pusher1] = -PUSHER_SPEED;
-		}
-		if (pusher > 0 && pusherRetract == 0) {
-			pusher++;
-			motor[pusher1] = PUSHER_SPEED;
-		}
-		if (pusher == 0) {
-			if (vexRT[Btn5D] == 1) {
-				pusher++; // add 1 to pusher
-				motor[pusher1] = PUSHER_SPEED;
-			}
-			pusherRetract = 0;
-		}
-		motor[pusher2] = motor[pusher1];
-		// pusherBefore = pusher;
-		sleep(20);
+		EndTimeSlice();
 	}
 }
