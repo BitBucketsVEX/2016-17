@@ -81,14 +81,6 @@ int const dt = 20;  // number of milliseconds per each control loop
 int const maxSteer = 50; // percent of drive to apply to steering
 
 
-int pusher = 0;
-int pusherRetract = 0;
-int const MAX_PUSHER = 61;
-int const PUSHER_SPEED = 127;
-
-
-
-
 int linearize(int vel) {
 	int pwm;
 	int linear[129] = {0, 0, 18, 18, 19, 19, 19, 19, 19, 19, 20, 20, 20, 20,
