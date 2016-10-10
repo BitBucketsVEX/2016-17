@@ -1,0 +1,27 @@
+<script type="text/javascript" async src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=AM_CHTML"></script>
+<center>
+	<h1>*WARNING*</h1>
+	<h1>MATH AHEAD</h1>
+</center>
+<h1>`d/(dt)epsilon(t) = (\Deltaepsilon(t))/(\Deltat)`</h1>
+<h1>`d/(dt)epsilon(t) \approx (epsilon(t) - epsilon(t - 1)) / (\Deltat) \approx (epsilon(t + 1) - epsilon(t)) / (\Deltat)`</h1>
+<h1>`(epsilon(t) - epsilon(t - 1)) / (\Deltat) \approx (epsilon(t + 1) - epsilon(t)) / (\Deltat)`</h1>
+<h1>`epsilon(t) - epsilon(t - 1) \approx epsilon(t + 1) - epsilon(t)`</h1>
+<h1>`2varepsilon(t) \approx epsilon(t + 1) + epsilon(t - 1)`</h1>
+<h1>`epsilon(t + 1) \approx 2epsilon(t) - epsilon(t - 1)`</h1>
+<h1>`v = K_p * epsilon(t)`</h1>
+<h1>If error = `epsilon(t + 1)`, and the distance desired = `n`</h1>
+<h1>`n - K_p * epsilon(t) * \Deltat = epsilon(t + 1)`</h1>
+<h1>To get an error of 0, move `epsilon(t + 1)` to the other side of the equation</h1>
+<h1>`n - K_p * epsilon(t) * \Deltat - epsilon(t + 1) = 0`</h1>
+<h1>`n - K_p * epsilon(t) * \Deltat - (epsilon(t + 1) * \Deltat) / (\Deltat) = 0`</h1>
+<h1>`n - \Deltat * (K_p * epsilon(t) - (epsilon(t + 1)) / (\Deltat)) = 0`</h1>
+<h1>New velocity: `K_p * epsilon(t) - (epsilon(t + 1)) / (\Deltat)`</h1>
+<h1>`v_n = K_p * epsilon(t) - (epsilon(t + 1)) / (\Deltat)`</h1>
+<h1>`epsilon(t + 1) \approx 2epsilon(t) - epsilon(t - 1)`</h1>
+<h1>`v_n \approx K_p * epsilon(t) - (2epsilon(t) - epsilon(t - 1)) / (\Deltat)`</h1>
+<h1>`v_n \approx epsilon(t) * (K_p - 2 / (\Deltat)) + (epsilon(t - 1)) / (\Deltat)`</h1>
+<h1>Or simply:</h1>
+<h1>`P = K_p * epsilon(t)`</h1>
+<h1>`D = -(epsilon(t + 1)) / (\Deltat) = -(2epsilon(t) - epsilon(t - 1)) / (\Deltat)`</h1>
+<h1>`v_n \approx P + D`</h1>
