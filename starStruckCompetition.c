@@ -271,7 +271,7 @@ void maintainArmPosition(void)
 // to drive and joystick functions; this allows some control over
 // priority to ensure position control is tight
 bool armControlInitialized = false;
-const long ARM_CONTROL_PERIOD_MSEC = 5;
+const long ARM_CONTROL_PERIOD_MSEC = 1;
 unsigned int armCount = 0;
 task armControl()
 {
@@ -287,7 +287,7 @@ task armControl()
 
 #ifdef TEST_SIM
     // only display in emulator
-		displayLCDNumber(0, 3, (armCount++)%10, 2);
+		displayLCDNumber(0, 2, (armCount++)%100, 3);
 #endif
 
 		wait1Msec(ARM_CONTROL_PERIOD_MSEC);	// Let lower priority tasks execute before resuming control
@@ -368,7 +368,7 @@ task driveSpeedControl()
 
 #ifdef TEST_SIM
     // only display in emulator
-		displayLCDNumber(0, 9, (driveCount++)%10, 2);
+		displayLCDNumber(0, 8, (driveCount++)%100, 3);
 #endif
 
 		wait1Msec(DRIVE_SPEED_CONTROL_PERIOD_MSEC);
