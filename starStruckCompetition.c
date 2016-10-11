@@ -14,7 +14,15 @@
 #pragma autonomousDuration(20)
 #pragma userControlDuration(120)
 
-#include "Vex_Competition_Includes.c"
+
+// Comment/uncomment this TEST_SIM flag to switch between real and emulation
+//#define TEST_SIM
+
+#ifndef TEST_SIM
+	#include "Vex_Competition_Includes.c"
+#else
+  bool bStopTasksBetweenModes = true;
+#endif
 
 /*
      ___          __        ______   .__   __.   _______    .___________. __  .___  ___.  _______         ___       _______   ______
@@ -128,114 +136,161 @@ typedef struct
 	float kp;
 	float ki;
 	float kd;
+	float kb;
 	int pid;
-} motorPositionControlType;
+} motorControlType;
 
-// A list of the motors we want to position control during the motorControl task
-struct motorPositionControlType positionControlledMotors[2];
-
-// Constructor - not ideal, but will create each instance in the known array
-// of controllable motors (see array above)
-void constructPositionControlledMotor(unsigned int index, tMotor mId, tSensors sId, float kp, float ki, float kd)
+// Define operations for the motorControlType (similar to what we might have in C++ so the concepts will port
+// easily if ROBOTC ever grows up
+void constructMotorControl(motorControlType *this, tMotor mId, tSensors sId, float kp, float ki, float kd, float kb)
 {
-	if (index < DIM(positionControlledMotors))
-	{
-		positionControlledMotors[index].mId = mId;
-		positionControlledMotors[index].sId = sId;
-		positionControlledMotors[index].command_deg = 0.0;
-		positionControlledMotors[index].encoder_deg = 0.0;
-		positionControlledMotors[index].encoder_rpm = 0.0;
-		positionControlledMotors[index].kp = kp;
-		positionControlledMotors[index].ki = ki;
-		positionControlledMotors[index].kd = kd;
-		positionControlledMotors[index].pid = 0;
-	}
+	this->mId = mId;
+	this->sId = sId;
+	this->command_deg = 0.0;
+	this->encoder_deg = 0.0;
+	this->encoder_rpm = 0.0;
+	this->kp = kp;
+	this->ki = ki;
+	this->kd = kd;
+	this->kb = kb;
+	this->pid = 0;
 }
 
 // Each motor can be set to an independent position
-// Really, the control depends on which encoder is associated
-// So this is not the best approach, but rather where we are at
-// today
-void setPositionMotorCommand(const unsigned int index, float aPosition_deg)
+// So we provide accessor functions to represent the interface
+// This is a practice similar to what is seen in object oriented
+// designs rather than allowing direct access to the elements
+// This allows us to modify behavior globally instead of needing
+// to find all uses
+
+// For every "set" there is a "get" function
+void setPosition(motorControlType *this, float aPosition_deg)
 {
-	if (index < DIM(positionControlledMotors))
+	this->command_deg = aPosition_deg;
+}
+
+// In this case the get function is not the inverse of the set
+// Instead we will return the latest encoder position as read
+// by the maintainPosition function
+float getPosition(motorControlType *this)
+{
+	return this->encoder_deg;
+}
+
+void resetPosition(motorControlType *this)
+{
+		SensorValue[this->sId] = 0;	// Use the shaft encoder rather than integrated encoders
+}
+
+// A function to actually apply the control to each motor
+void maintainPosition(motorControlType *this)
+{
+	long encoder_tick = SensorValue[this->sId];		// Using shaft encoders for the moment
+	this->encoder_rpm  = 0.0;	  // TODO: No derivative control at this time
+
+
+	this->encoder_deg = encoder_tick * DEGREES_PER_TICK;
+	float error_deg = this->command_deg - this->encoder_deg;
+	if (abs(error_deg) > 0)
 	{
-		positionControlledMotors[index].command_deg = aPosition_deg;
+		// make the speed proportional to the error
+	  int lastPidSign = (this->pid != 0)? this->pid/abs(this->pid) : 1;
+	  this->pid = (int)(this->kp * error_deg) + lastPidSign*(int)(this->kd * this->encoder_rpm); // truncate to integer
+	  if (this->pid > MAX_MOTOR_COMMAND)
+	  {
+	  	this->pid = MAX_MOTOR_COMMAND;
+	  }
+	  else if (this->pid < -MAX_MOTOR_COMMAND)
+	  {
+	  	this->pid = -MAX_MOTOR_COMMAND;
+	  }
+	  motor[this->mId] = this->pid;
+	}
+	else
+	{
+		// When within the target tolerance, stop.
+		motor[this->mId] = 0;
 	}
 }
 
-//
-float getPositionMotorCommand(const unsigned int index)
+// ------------------------------------------------------------
+// ------------------------------------------------------------
+// A set of the motors we want to position control during the armControl task
+struct motorControlType armMotors[2];
+
+// Functions to create and control arm motors as single call
+bool armMotorsConstructed = false;
+void constructArmMotorControls(void)
 {
-	float retval = 0.0;
-
-	if (index < DIM(positionControlledMotors))
+	if ( ! armMotorsConstructed)
 	{
-		retval = positionControlledMotors[index].command_deg;
-	}
+		constructMotorControl(&armMotors[0],arm1,    shaft, 2.0, 0.0, 0.0, 0.0);	// Only proportional control at this time
+		constructMotorControl(&armMotors[1],arm2,    shaft, 2.0, 0.0, 0.0, 0.0);
 
-	return retval;
-}
-
-void resetPositionControlledMotors(void)
-{
-	for (unsigned int i = 0; i < DIM(positionControlledMotors); ++i)
-	{
-		SensorValue[positionControlledMotors[i].sId] = 0;	// Use the shaft encoder
+		armMotorsConstructed = true;
 	}
 }
 
-// A function to actually apply the control to each motor in the control list
-//
-// TODO: It would be better to slave motors on command and occassionally correct
-// for positioning errors, but there is more work to be done
-void maintainMotorPosition(void)
+void resetArmPosition(void)
 {
-	for (unsigned int i = 0; i < DIM(positionControlledMotors); ++i)
+	for (int i = 0; i < DIM(armMotors); ++i)
 	{
-		struct motorPositionControlType *pSomeMotorControl = &positionControlledMotors[i];
-
-		long encoder_tick = SensorValue[pSomeMotorControl->sId];		// Using shaft encoders for the moment
-		pSomeMotorControl->encoder_rpm  = 0.0;	  // TODO: No derivative control at this time
-
-
-		pSomeMotorControl->encoder_deg = encoder_tick * DEGREES_PER_TICK;
-		float error_deg = pSomeMotorControl->command_deg - pSomeMotorControl->encoder_deg;
-		if (abs(error_deg) > 0)
-		{
-			// make the speed proportional to the error
-		  int lastPidSign = (pSomeMotorControl->pid != 0)? pSomeMotorControl->pid/abs(pSomeMotorControl->pid) : 1;
-		  pSomeMotorControl->pid = (int)(pSomeMotorControl->kp * error_deg) + lastPidSign*(int)(pSomeMotorControl->kd * pSomeMotorControl->encoder_rpm); // truncate to integer
-		  if (pSomeMotorControl->pid > MAX_MOTOR_COMMAND)
-		  {
-		  	pSomeMotorControl->pid = MAX_MOTOR_COMMAND;
-		  }
-		  else if (pSomeMotorControl->pid < -MAX_MOTOR_COMMAND)
-		  {
-		  	pSomeMotorControl->pid = -MAX_MOTOR_COMMAND;
-		  }
-		  motor[pSomeMotorControl->mId] = pSomeMotorControl->pid;
-		}
-		else
-		{
-			// When within the target tolerance, stop.
-			motor[pSomeMotorControl->mId] = 0;
-		}
-
+		resetPosition(&armMotors[i]);
 	}
 }
+
+void setArmPosition(float angle_deg)
+{
+	// Hog the CPU while setting all the positions
+  // to ensure they change atomically even for the high priority
+  // task
+	hogCPU();
+
+	for (int i = 0; i < DIM(armMotors); ++i)
+	{
+		setPosition(&armMotors[i], angle_deg);
+	}
+
+	releaseCPU();
+}
+
+
+void maintainArmPosition(void)
+{
+	for (int i = 0; i < DIM(armMotors); ++i)
+	{
+		// Assume that arm position is controlled at high priority
+		// eliminating the need to hog the CPU
+		maintainPosition(&armMotors[i]);
+	}
+}
+
+
 
 // Let the motor position control run as a concurrent activity
 // to drive and joystick functions; this allows some control over
 // priority to ensure position control is tight
-task motorPositionControl()
+bool armControlInitialized = false;
+const long ARM_CONTROL_PERIOD_MSEC = 5;
+unsigned int armCount = 0;
+task armControl()
 {
-	resetPositionControlledMotors();
+	if ( ! armControlInitialized)
+	{
+		resetArmPosition();
+		armControlInitialized = true;
+	}
 
 	for EVER
 	{
-		maintainMotorPosition();
-		sleep(1);	// Let lower priority tasks execute before resuming control
+		maintainArmPosition();
+
+#ifdef TEST_SIM
+    // only display in emulator
+		displayLCDNumber(0, 3, (armCount++)%10, 2);
+#endif
+
+		wait1Msec(ARM_CONTROL_PERIOD_MSEC);	// Let lower priority tasks execute before resuming control
 	}
 }
 
@@ -243,12 +298,6 @@ task motorPositionControl()
 // -----------------------------------------------------------------------------
 // Drive Control
 // -----------------------------------------------------------------------------
-
-int driveSpeed = 0; //The forward drive speed.
-int turnCoef = 0; //The turning amount.
-
-int const dt = 20;  // number of milliseconds per each control loop
-int const maxSteer = 50; // percent of drive to apply to steering
 
 int linear[129] =
 {
@@ -293,18 +342,47 @@ int deadband(int vel)
 // Drive control is a separate task to ensure that we can add additional
 // control functions independently of the input commands from drive speed
 // and turn coefficient
-task Drive_control
+int const DRIVE_SPEED_CONTROL_PERIOD_MSEC = 20;  // number of milliseconds per each control loop
+int const MAX_STEER = 50; // percent of drive to apply to steering
+
+int driveSpeed = 0; //The forward drive speed.
+int turnCoef = 0; //The turning amount.
+unsigned int driveCount = 0;
+task driveSpeedControl()
 {
 	for EVER
 	{
-		if (driveSpeed > MAX_MOTOR_COMMAND) { driveSpeed = MAX_MOTOR_COMMAND; }
-		if (driveSpeed < -MAX_MOTOR_COMMAND) { driveSpeed = -MAX_MOTOR_COMMAND; }
-		if (turnCoef > MAX_MOTOR_COMMAND) { turnCoef = MAX_MOTOR_COMMAND; }
-		if (turnCoef < -MAX_MOTOR_COMMAND) { turnCoef = -MAX_MOTOR_COMMAND; }
-		motor[backLeft] = motor[frontLeft] = linearize(driveSpeed + (maxSteer * turnCoef / 100));
-		motor[backRight] = motor[frontRight] = linearize(driveSpeed - (maxSteer * turnCoef / 100));
-		wait1Msec(dt);
+		// Linearizing will also limit the output
+	  const int STEER = (MAX_STEER * turnCoef / 100);
+
+	  // Minimize latency while hogging CPU
+	  const int LEFT = linearize(driveSpeed + STEER);
+	  const int RIGHT = linearize(driveSpeed - STEER);
+
+	  // Hogging CPU here ensures that all 4 motors receive
+	  // commands "atomically"
+	  hogCPU();
+		motor[backLeft] = motor[frontLeft] = LEFT;
+		motor[backRight] = motor[frontRight] = RIGHT;
+		releaseCPU();
+
+#ifdef TEST_SIM
+    // only display in emulator
+		displayLCDNumber(0, 9, (driveCount++)%10, 2);
+#endif
+
+		wait1Msec(DRIVE_SPEED_CONTROL_PERIOD_MSEC);
 	}
+}
+
+// drive position control is only used during autonomous and
+// other similar demos to process command sequences maintaining the
+// heading and field position
+task drivePositionControl()
+{
+	// TODO: Insert code similar to arm control but this time
+  // we will keep track of (x,y) and heading, stopping only
+  // when both are achieved
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -319,6 +397,8 @@ task Drive_control
 void pre_auton()
 {
 	bStopTasksBetweenModes = true;
+
+	constructArmMotorControls();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -332,6 +412,17 @@ void pre_auton()
 
 task autonomous()
 {
+	// Assume arm control and drive controls have been constructed
+
+	// Place the motor control loop at higher priority than the main loop
+	// so we can ensure more stable application of time. The motor control
+	// loop must sleep long enough for other tasks to get execution time
+	short armControlPriority = getTaskPriority(autonomous) + 1;
+	startTask(armControl, armControlPriority);
+
+	// Need both drive speed and drive position control during autonomous mode
+	startTask(driveSpeedControl);
+	startTask(drivePositionControl);
 
 }
 
@@ -348,21 +439,25 @@ bool armUp = false;
 
 task usercontrol()
 {
-	constructPositionControlledMotor(0,arm1,    shaft,2.0,0.0,0.0);	// Only proportional control at this time
-	constructPositionControlledMotor(1,arm2,    shaft,2.0,0.0,0.0);
+
+	// Assume arm controls and drive controls have been constructed
 
 	// Place the motor control loop at higher priority than the main loop
 	// so we can ensure more stable application of time. The motor control
 	// loop must sleep long enough for other tasks to get execution time
-	short motorPositionControlPriority = getTaskPriority(usercontrol) + 1;
-	startTask(motorPositionControl, motorPositionControlPriority);
+	short armControlPriority = getTaskPriority(usercontrol) + 1;
+	startTask(armControl, armControlPriority);
 
-	startTask(Drive_control);
+	// Only need drive speed control in user control mode
+	startTask(driveSpeedControl);
 
 	for EVER
 	{
+		// Read the joysticks for drive control
+	  // passing the latest command for the drive speed task
+	  // to pick up on next cycle
 		driveSpeed = deadband(vexRT[Ch3]);
-		turnCoef = deadband(vexRT[Ch1]);
+		turnCoef   = deadband(vexRT[Ch1]);
 
 		// The following is VERY EARLY TEST CODE ONLY
 		if (vexRT[Btn5D] == 1)
@@ -370,11 +465,7 @@ task usercontrol()
 			if ( ! armUp)
 			{
 
-				hogCPU();
-				setPositionMotorCommand(0, 120.0);
-				setPositionMotorCommand(1, 120.0);
-				releaseCPU();
-
+				setArmPosition(120.0);
 				armUp = true;
 			}
 		}
@@ -382,11 +473,7 @@ task usercontrol()
 		{
 			if (armUp)
 			{
-				hogCPU();
-				setPositionMotorCommand(0, 0.0);
-				setPositionMotorCommand(1, 0.0);
-				releaseCPU();
-
+				setArmPosition(10.0);
 				armUp = false;
 			}
 		}
@@ -394,3 +481,31 @@ task usercontrol()
 		EndTimeSlice();
 	}
 }
+
+// Take over for VEX main task when testing in emulator
+#ifdef TEST_SIM
+
+task main()
+{
+	//Setup the VEX LCD for displaying tasks
+	clearLCDLine(0);
+	clearLCDLine(1);
+	displayLCDString(0, 0, "0: xx 1: xx");
+
+	pre_auton();
+
+	startTask(autonomous);
+
+	wait1Msec(1000);
+	stopTask(autonomous);
+
+	startTask(usercontrol);
+
+	for EVER
+	{
+		wait10Msec(100);
+	}
+
+}
+
+#endif
