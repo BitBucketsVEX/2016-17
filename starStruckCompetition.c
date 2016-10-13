@@ -98,8 +98,7 @@
 //                                                                                    //
 ////////////////////////////////////////////////////////////////////////////////////////
 
-void pre_auton()
-{
+void pre_auton() {
 	bStopTasksBetweenModes = true;
 
 	constructArmMotorControls();
@@ -114,8 +113,7 @@ void pre_auton()
 //
 /////////////////////////////////////////////////////////////////////////////////////////
 
-task autonomous()
-{
+task autonomous() {
 	// Assume arm control and drive controls have been constructed
 
 	// Place the motor control loop at higher priority than the main loop
@@ -141,8 +139,7 @@ task autonomous()
 
 bool armUp = false;
 
-task usercontrol()
-{
+task usercontrol() {
 
 	// Assume arm controls and drive controls have been constructed
 
@@ -155,8 +152,7 @@ task usercontrol()
 	// Only need drive speed control in user control mode
 	startTask(driveSpeedControl);
 
-	for EVER
-	{
+	for EVER {
 		// Read the joysticks for drive control
 	  // passing the latest command for the drive speed task
 	  // to pick up on next cycle
@@ -164,19 +160,13 @@ task usercontrol()
 		turnCoef   = deadband(vexRT[Ch1]);
 
 		// The following is VERY EARLY TEST CODE ONLY
-		if (vexRT[Btn5D] == 1)
-		{
-			if ( ! armUp)
-			{
-
+		if (vexRT[Btn5D] == 1) {
+			if (!armUp) {
 				setArmPosition(120.0);
 				armUp = true;
 			}
-		}
-		else
-		{
-			if (armUp)
-			{
+		} else {
+			if (armUp) {
 				setArmPosition(10.0);
 				armUp = false;
 			}
@@ -189,8 +179,7 @@ task usercontrol()
 // Take over for VEX main task when testing in emulator
 #ifdef TEST_SIM
 
-task main()
-{
+task main() {
 	//Setup the VEX LCD for displaying tasks
 	clearLCDLine(0);
 	clearLCDLine(1);
@@ -205,8 +194,7 @@ task main()
 
 	startTask(usercontrol);
 
-	for EVER
-	{
+	for EVER {
 		wait10Msec(100);
 	}
 

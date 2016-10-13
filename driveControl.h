@@ -10,8 +10,7 @@
 // Drive Control
 // -----------------------------------------------------------------------------
 
-int linear[129] =
-{
+int linear[129] = {
 	0, 0, 18, 18, 19, 19, 19, 19, 19, 19, 20, 20, 20, 20,
 	21, 21, 21, 21, 21, 21, 22, 22, 22, 22, 23, 23, 24, 24, 24, 25, 25, 25,
 	25, 26, 26, 26, 26, 27, 27, 27, 27, 28, 28, 29, 29, 29, 29, 30, 30, 30,
@@ -22,31 +21,24 @@ int linear[129] =
 	87, 87, 88, 90, 96, 105, 105
 };
 
-int linearize(int vel)
-{
+int linearize(int vel) {
 	int pwm;
 
-	if (vel > MAX_MOTOR_COMMAND)
-	{
+	if (vel > MAX_MOTOR_COMMAND) {
 		vel = MAX_MOTOR_COMMAND;
 	}
-	if (vel < -MAX_MOTOR_COMMAND)
-	{
+	if (vel < -MAX_MOTOR_COMMAND) {
 		vel = -MAX_MOTOR_COMMAND;
 	}
-	if (vel < 0)
-	{
+	if (vel < 0) {
 		pwm = -linear[-vel];
-	}
-	else
-	{
+	} else {
 		pwm = linear[vel];
 	}
 	return pwm;
 }
 
-int deadband(int vel)
-{
+int deadband(int vel) {
 	return ((abs(vel) < 24) ? 0 : vel);
 }
 
@@ -63,28 +55,25 @@ int turnCoef = 0; //The turning amount.
 	unsigned int driveCount = 0;
 #endif
 
-task driveSpeedControl()
-{
-	for EVER
-	{
+task driveSpeedControl() {
+	for EVER {
 		// Linearizing will also limit the output
 	  const int STEER = (MAX_STEER * turnCoef / 100);
 
 	  // Minimize latency while hogging CPU
-	  const int LEFT = linearize(driveSpeed + STEER);
-	  const int RIGHT = linearize(driveSpeed - STEER);
+	  hogCPU();
+	  motor[backLeft] = motor[frontLeft] = linearize(driveSpeed + STEER);
+	  motor[backRight] = motor[frontRight] = linearize(driveSpeed - STEER);
 
 	  // Hogging CPU here ensures that all 4 motors receive
 	  // commands "atomically"
-	  hogCPU();
-		motor[backLeft] = motor[frontLeft] = LEFT;
-		motor[backRight] = motor[frontRight] = RIGHT;
+
 		releaseCPU();
 
-#ifdef TEST_SIM
+		#ifdef TEST_SIM
     // only display in emulator
-		displayLCDNumber(0, 8, (driveCount++)%100, 3);
-#endif
+			displayLCDNumber(0, 8, (driveCount++)%100, 3);
+		#endif
 
 		wait1Msec(DRIVE_SPEED_CONTROL_PERIOD_MSEC);
 	}
@@ -93,8 +82,7 @@ task driveSpeedControl()
 // drive position control is only used during autonomous and
 // other similar demos to process command sequences maintaining the
 // heading and field position
-task drivePositionControl()
-{
+task drivePositionControl() {
 	// TODO: Insert code similar to arm control but this time
   // we will keep track of (x,y) and heading, stopping only
   // when both are achieved

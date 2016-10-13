@@ -15,7 +15,7 @@
 
 const int MAX_MOTOR_COMMAND = 127;
 const float MAX_RPM = 100.0;	// Standard 393
-const float TICKS_PER_RPM = (float)MAX_MOTOR_COMMAND / MAX_RPM;
+const float TICKS_PER_RPM = (float) MAX_MOTOR_COMMAND / MAX_RPM;
 
 
 // Encoder data sheet
@@ -41,34 +41,34 @@ const float DEGREES_PER_TICK = 1.0 / TICKS_PER_DEGREE;
 // control parameters, and status. Since RobotC
 // is C and not C++, we will define separate functions
 // rather than encapsulate the desired behavior
-typedef struct
-{
+typedef struct {
 	tMotor mId;
 	tSensors sId;
-	float command_deg;
-	float encoder_deg;
-	float encoder_rpm;
+	float commandDeg;
+	float encoderDeg;
+	float encoderRPM;
 	float kp;
 	float ki;
 	float kd;
 	float kb;
 	int pid;
+	float biasDeg;
 } motorControlType;
 
 // Define operations for the motorControlType (similar to what we might have in C++ so the concepts will port
 // easily if ROBOTC ever grows up
-void constructMotorControl(motorControlType *this, tMotor mId, tSensors sId, float kp, float ki, float kd, float kb)
-{
+void constructMotorControl(motorControlType *this, tMotor mId, tSensors sId, float kp, float ki, float kd, float kb, float biasDeg) {
 	this->mId = mId;
 	this->sId = sId;
-	this->command_deg = 0.0;
-	this->encoder_deg = 0.0;
-	this->encoder_rpm = 0.0;
+	this->commandDeg = 0.0;
+	this->encoderDeg = 0.0;
+	this->encoderRPM = 0.0;
 	this->kp = kp;
 	this->ki = ki;
 	this->kd = kd;
 	this->kb = kb;
 	this->pid = 0;
+	this->biasDeg = biasDeg;
 }
 
 // Each motor can be set to an independent position
@@ -79,50 +79,40 @@ void constructMotorControl(motorControlType *this, tMotor mId, tSensors sId, flo
 // to find all uses
 
 // For every "set" there is a "get" function
-void setPosition(motorControlType *this, float aPosition_deg)
-{
-	this->command_deg = aPosition_deg;
+void setPosition(motorControlType *this, float positionDeg) {
+	this->commandDeg = positionDeg;
 }
 
 // In this case the get function is not the inverse of the set
 // Instead we will return the latest encoder position as read
 // by the maintainPosition function
-float getPosition(motorControlType *this)
-{
-	return this->encoder_deg;
+float getPosition(motorControlType *this) {
+	return this->encoderDeg;
 }
 
-void resetPosition(motorControlType *this)
-{
+void resetPosition(motorControlType *this) {
 		SensorValue[this->sId] = 0;	// Use the shaft encoder rather than integrated encoders
 }
 
 // A function to actually apply the control to each motor
-void maintainPosition(motorControlType *this)
-{
+void maintainPosition(motorControlType *this) {
 	long encoder_tick = SensorValue[this->sId];		// Using shaft encoders for the moment
-	this->encoder_rpm  = 0.0;	  // TODO: No derivative control at this time
+	this->encoderRPM  = 0.0;	  // TODO: No derivative control at this time
 
 
-	this->encoder_deg = encoder_tick * DEGREES_PER_TICK;
-	float error_deg = this->command_deg - this->encoder_deg;
-	if (abs(error_deg) > 0)
-	{
+	this->encoderDeg = encoder_tick * DEGREES_PER_TICK;
+	float error = this->commandDeg - this->encoderDeg;
+	if (abs(error) > 0) {
 		// make the speed proportional to the error
-	  int lastPidSign = (this->pid != 0)? this->pid/abs(this->pid) : 1;
-	  this->pid = (int)(this->kp * error_deg) + lastPidSign*(int)(this->kd * this->encoder_rpm); // truncate to integer
-	  if (this->pid > MAX_MOTOR_COMMAND)
-	  {
+	  //int lastPidSign = (this->pid != 0)? this->pid / abs(this->pid) : 1;
+	  this->pid = (int) (this->kp * error)// Since no derivative right now: + lastPidSign* (int) (this->kd * this->encoder_rpm); // truncate to integer
+	  if (this->pid > MAX_MOTOR_COMMAND) {
 	  	this->pid = MAX_MOTOR_COMMAND;
-	  }
-	  else if (this->pid < -MAX_MOTOR_COMMAND)
-	  {
+	  } else if (this->pid < -MAX_MOTOR_COMMAND) {
 	  	this->pid = -MAX_MOTOR_COMMAND;
 	  }
 	  motor[this->mId] = this->pid;
-	}
-	else
-	{
+	} else {
 		// When within the target tolerance, stop.
 		motor[this->mId] = 0;
 	}
