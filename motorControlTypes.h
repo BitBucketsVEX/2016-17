@@ -105,7 +105,9 @@ void maintainPosition(motorControlType *this) {
 	if (abs(error) > 0) {
 		// make the speed proportional to the error
 	  //int lastPidSign = (this->pid != 0)? this->pid / abs(this->pid) : 1;
-	  this->pid = (int) (this->kp * error)// Since no derivative right now: + lastPidSign* (int) (this->kd * this->encoder_rpm); // truncate to integer
+	  this->pid = (int) (this->kp * error);
+	  this->pid += (int) (this->kb * cos((this->encoderDeg - this->biasDeg) * PI / 180));
+	  // this->pid += lastPidSign* (int) (this->kd * this->encoder_rpm); // truncate to integer
 	  if (this->pid > MAX_MOTOR_COMMAND) {
 	  	this->pid = MAX_MOTOR_COMMAND;
 	  } else if (this->pid < -MAX_MOTOR_COMMAND) {
