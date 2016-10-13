@@ -140,6 +140,7 @@ task autonomous() {
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool armUp = false;
+bool partialArmUp = false;
 
 task usercontrol() {
 
@@ -183,6 +184,18 @@ task usercontrol() {
 			{
 				setArmPosition(0.0);
 				armUp = false;
+			}
+		}
+
+		if (vexRT[Btn6U] == 1) {
+			if (!partialArmUp) {
+				setArmPosition(10);
+				partialArmUp = true;
+			}
+		} else if (vexRT[Btn6D] == 1) {
+			if  (partialArmUp) {
+				setArmPosition(0);
+				partialArmUp = false;
 			}
 		}
 
