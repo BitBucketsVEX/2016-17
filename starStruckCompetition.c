@@ -159,6 +159,10 @@ task usercontrol() {
 		// Read the joysticks for drive control
 	  // passing the latest command for the drive speed task
 	  // to pick up on next cycle
+		/*int x = deadband(vexRT[Ch4]);
+		int y = deadband(vexRT[Ch3]);
+		driveSpeed = (int) sqrt(x * x + y * y);
+		turnCoef = ATAN(y, x);*/
 		driveSpeed = deadband(vexRT[Ch3]);
 		turnCoef   = deadband(vexRT[Ch1]);
 
@@ -204,7 +208,8 @@ task main() {
 	//Setup the VEX LCD for displaying tasks
 	clearLCDLine(0);
 	clearLCDLine(1);
-	displayLCDString(0, 0, "0: xx 1: xx");
+	int x = BOUND(0, -127, 127);
+	displayLCDString(x, 0, "0: xx 1: xx");
 
 	pre_auton();
 

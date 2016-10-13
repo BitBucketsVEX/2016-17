@@ -130,8 +130,9 @@ void maintainPosition(motorControlType *this) {
 	 	//this->pid += (int) -futureError / ARM_CONTROL_PERIOD_MSEC;	no derivative
 	 	//this->pid += (int) this->ki * this->intError; 							or integral control yet
 
-	  MAX(this->pid, MAX_MOTOR_COMMAND);
-	  MIN(this->pid, -MAX_MOTOR_COMMAND);
+	  //this->pid = BOUND(this->pid, -MAX_MOTOR_COMMAND, MAX_MOTOR_COMMAND); //MAX(this->pid, MAX_MOTOR_COMMAND);
+	  //MIN(this->pid, -MAX_MOTOR_COMMAND);
+	  this->pid = BOUND(this->pid, -MAX_MOTOR_COMMAND, MAX_MOTOR_COMMAND);
 	  /*if (this->pid > MAX_MOTOR_COMMAND) {
 	  	this->pid = MAX_MOTOR_COMMAND;
 	  } else if (this->pid < -MAX_MOTOR_COMMAND) {

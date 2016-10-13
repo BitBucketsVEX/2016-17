@@ -24,23 +24,37 @@ int linear[129] = {
 int linearize(int vel) {
 	int pwm;
 
-	MAX(vel, MAX_MOTOR_COMMAND);
-	MIN(vel, -MAX_MOTOR_COMMAND);
-
+	//vel = BOUND(vel, -MAX_MOTOR_COMMAND, MAX_MOTOR_COMMAND); //MIN(vel, MAX(vel, MAX_MOTOR_COMMAND), -MAX_MOTOR_COMMAND);
 	/*if (vel > MAX_MOTOR_COMMAND) {
 		vel = MAX_MOTOR_COMMAND;
 	}
 	if (vel < -MAX_MOTOR_COMMAND) {
 		vel = -MAX_MOTOR_COMMAND;
 	}*/
+	vel = BOUND(vel, -MAX_MOTOR_COMMAND, MAX_MOTOR_COMMAND);
 
-	pwm = SIGN(vel) * linear[abs(vel)]
 	if (vel < 0) {
 		pwm = -linear[-vel];
 	} else {
 		pwm = linear[vel];
 	}
 	return pwm;
+	/*//MIN(vel, -MAX_MOTOR_COMMAND);
+
+	/*if (vel > MAX_MOTOR_COMMAND) {
+		vel = MAX_MOTOR_COMMAND;
+	}
+	if (vel < -MAX_MOTOR_COMMAND) {
+		vel = -MAX_MOTOR_COMMAND;
+	}
+
+	pwm = SIGN(vel) * linear[abs(vel)];
+	if (vel < 0) {
+		pwm = -linear[-vel];
+	} else {
+		pwm = linear[vel];
+	}
+	return pwm;*/
 }
 
 int deadband(int vel) {
@@ -63,7 +77,7 @@ int turnCoef = 0; //The turning amount.
 task driveSpeedControl() {
 	for EVER {
 		// Linearizing will also limit the output
-	  const int STEER = (MAX_STEER * turnCoef / 100);
+	  int STEER = (MAX_STEER * turnCoef / 100);
 
 	  // Minimize latency while hogging CPU
 	  hogCPU();
