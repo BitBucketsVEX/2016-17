@@ -121,12 +121,12 @@ task autonomous() {
 	// Place the motor control loop at higher priority than the main loop
 	// so we can ensure more stable application of time. The motor control
 	// loop must sleep long enough for other tasks to get execution time
-	short armControlPriority = getTaskPriority(autonomous) + 1;
-	startTask(armControl, armControlPriority);
+	//short armControlPriority = getTaskPriority(autonomous) + 1;
+	//startTask(armControl, armControlPriority);
 
-	// Need both drive speed and drive position control during autonomous mode
-	startTask(driveSpeedControl);
-	startTask(drivePositionControl);
+	//// Need both drive speed and drive position control during autonomous mode
+	//startTask(driveSpeedControl);
+	//startTask(drivePositionControl);
 
 }
 
@@ -181,7 +181,7 @@ task usercontrol() {
 		{
 			if (armUp)
 			{
-				setArmPosition(10.0);
+				setArmPosition(0.0);
 				armUp = false;
 			}
 		}
