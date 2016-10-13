@@ -41,6 +41,11 @@ const float DEGREES_PER_TICK = 1.0 / TICKS_PER_DEGREE;
 // control parameters, and status. Since RobotC
 // is C and not C++, we will define separate functions
 // rather than encapsulate the desired behavior
+
+
+const long ARM_CONTROL_PERIOD_MSEC = 1; // moved from armControl.h for approximation of change in time;
+
+
 typedef struct {
 	tMotor mId;
 	tSensors sId;
@@ -53,6 +58,8 @@ typedef struct {
 	float kb;
 	int pid;
 	float biasDeg;
+	float prevError;
+	float intError;
 } motorControlType;
 
 // Define operations for the motorControlType (similar to what we might have in C++ so the concepts will port
@@ -69,6 +76,8 @@ void constructMotorControl(motorControlType *this, tMotor mId, tSensors sId, flo
 	this->kb = kb;
 	this->pid = 0;
 	this->biasDeg = biasDeg;
+	this->prevError = 0;
+	this->intError = 0;
 }
 
 // Each motor can be set to an independent position
@@ -100,19 +109,34 @@ void maintainPosition(motorControlType *this) {
 	this->encoderRPM  = 0.0;	  // TODO: No derivative control at this time
 
 
+
 	this->encoderDeg = encoder_tick * DEGREES_PER_TICK;
+
+
+
+	float prevError = this->prevError;
 	float error = this->commandDeg - this->encoderDeg;
+	float futureError = 2 * error - prevError; // approximately, no derivative control yet, but for the future!
+	this->prevError = error;
+	this->intError += error; // no integral control yet, but for the future!
+
+
+
 	if (abs(error) > 0) {
 		// make the speed proportional to the error
 	  //int lastPidSign = (this->pid != 0)? this->pid / abs(this->pid) : 1;
 	  this->pid = (int) (this->kp * error);
 	  this->pid += (int) (this->kb * cos((this->encoderDeg - this->biasDeg) * PI / 180));
-	  // this->pid += lastPidSign* (int) (this->kd * this->encoder_rpm); // truncate to integer
-	  if (this->pid > MAX_MOTOR_COMMAND) {
+	 	//this->pid += (int) -futureError / ARM_CONTROL_PERIOD_MSEC;	no derivative
+	 	//this->pid += (int) this->ki * this->intError; 							or integral control yet
+
+	  MAX(this->pid, MAX_MOTOR_COMMAND);
+	  MIN(this->pid, -MAX_MOTOR_COMMAND);
+	  /*if (this->pid > MAX_MOTOR_COMMAND) {
 	  	this->pid = MAX_MOTOR_COMMAND;
 	  } else if (this->pid < -MAX_MOTOR_COMMAND) {
 	  	this->pid = -MAX_MOTOR_COMMAND;
-	  }
+	  }*/
 	  motor[this->mId] = this->pid;
 	} else {
 		// When within the target tolerance, stop.

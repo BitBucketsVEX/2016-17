@@ -24,12 +24,17 @@ int linear[129] = {
 int linearize(int vel) {
 	int pwm;
 
-	if (vel > MAX_MOTOR_COMMAND) {
+	MAX(vel, MAX_MOTOR_COMMAND);
+	MIN(vel, -MAX_MOTOR_COMMAND);
+
+	/*if (vel > MAX_MOTOR_COMMAND) {
 		vel = MAX_MOTOR_COMMAND;
 	}
 	if (vel < -MAX_MOTOR_COMMAND) {
 		vel = -MAX_MOTOR_COMMAND;
-	}
+	}*/
+
+	pwm = SIGN(vel) * linear[abs(vel)]
 	if (vel < 0) {
 		pwm = -linear[-vel];
 	} else {

@@ -14,4 +14,6 @@
 #define MIN(x,y) ((x < y)? x : y)
 #define MAX(x,y) ((x > y)? x : y)
 
+#define SIGN(x) ((x != 0) ? abs(x) / x : 1)
+
 #endif

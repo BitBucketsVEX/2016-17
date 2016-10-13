@@ -169,19 +169,13 @@ task usercontrol() {
 	  //motor[bottomLeft] = MAX(cmd,MAX_MOTOR_COMMAND);
 
 		// The following is VERY EARLY TEST CODE ONLY
-		if (vexRT[Btn5D] == 1)
-		{
-			if ( ! armUp)
-			{
-
+		if (vexRT[Btn5D] == 1) {
+			if (!armUp) {
 				setArmPosition(120.0);
 				armUp = true;
 			}
-		}
-		else
-		{
-			if (armUp)
-			{
+		} else {
+			if (armUp) {
 				setArmPosition(0.0);
 				armUp = false;
 			}
@@ -193,7 +187,7 @@ task usercontrol() {
 				partialArmUp = true;
 			}
 		} else if (vexRT[Btn6D] == 1) {
-			if  (partialArmUp) {
+			if (partialArmUp) {
 				setArmPosition(0);
 				partialArmUp = false;
 			}
