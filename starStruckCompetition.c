@@ -189,7 +189,7 @@ task usercontrol() {
 
 		if (vexRT[Btn6U] == 1) {
 			if (!partialArmUp) {
-				setArmPosition(10);
+				setArmPosition(60.0);
 				partialArmUp = true;
 			}
 		} else if (vexRT[Btn6D] == 1) {
