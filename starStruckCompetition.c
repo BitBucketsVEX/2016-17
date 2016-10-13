@@ -1,8 +1,8 @@
 #pragma config(Sensor, dgtl1,  shaft,          sensorQuadEncoder)
 #pragma config(Motor,  port2,           frontRight,    tmotorVex393_MC29, openLoop)
-#pragma config(Motor,  port3,           frontLeft,     tmotorVex393_MC29, openLoop, reversed)
+#pragma config(Motor,  port3,           backLeft,     tmotorVex393_MC29, openLoop, reversed)
 #pragma config(Motor,  port4,           backRight,     tmotorVex393_MC29, openLoop)
-#pragma config(Motor,  port5,           backLeft,      tmotorVex393_MC29, openLoop)
+#pragma config(Motor,  port5,           frontLeft,      tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port6,           topLeft,       tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port7,           topRight,      tmotorVex393_MC29, openLoop, reversed)
 #pragma config(Motor,  port8,           bottomLeft,    tmotorVex393_MC29, openLoop)
@@ -89,6 +89,7 @@
 #include "motorControlTypes.h"
 #include "armControl.h"
 #include "driveControl.h"
+#include "autonomous.h"
 
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -128,6 +129,9 @@ task autonomous() {
 	//startTask(driveSpeedControl);
 	//startTask(drivePositionControl);
 
+
+
+	forward(2 * MAT_LENGTH, 10);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -141,9 +145,10 @@ task autonomous() {
 
 bool armUp = false;
 bool partialArmUp = false;
+bool auto = false;
 
 task usercontrol() {
-
+	forward(2 * MAT_LENGTH, 10);
 	// Assume arm controls and drive controls have been constructed
 
 	// Place the motor control loop at higher priority than the main loop
@@ -153,7 +158,7 @@ task usercontrol() {
 	startTask(armControl, armControlPriority);
 
 	// Only need drive speed control in user control mode
-	startTask(driveSpeedControl);
+	//startTask(driveSpeedControl);
 
 	for EVER {
 		// Read the joysticks for drive control
@@ -163,8 +168,11 @@ task usercontrol() {
 		int y = deadband(vexRT[Ch3]);
 		driveSpeed = (int) sqrt(x * x + y * y);
 		turnCoef = ATAN(y, x);*/
-		driveSpeed = deadband(vexRT[Ch3]);
-		turnCoef   = deadband(vexRT[Ch1]);
+		/*if (!auto) {
+			driveSpeed = deadband(vexRT[Ch3]);
+			turnCoef   = deadband(vexRT[Ch1]);
+		}*/
+
 
 	  //int cmd = abs(deadband(vexRT[Ch1]));
 	  //motor[topRight] = MAX(cmd,MAX_MOTOR_COMMAND);
@@ -195,6 +203,15 @@ task usercontrol() {
 				setArmPosition(0);
 				partialArmUp = false;
 			}
+		}
+
+		if (vexRT[Btn8R] == 1) { // for testing of autonomous function only
+			if (auto == false) {
+				startTask(autonomous);
+				auto = true;
+			}
+		} else {
+			auto = false;
 		}
 
 		EndTimeSlice();
