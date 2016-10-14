@@ -103,17 +103,21 @@ task driveSpeedControl() {
 
 	  // Minimize latency while hogging CPU
 	  hogCPU();
-	  motor[backLeft] = motor[frontLeft] = linearize(driveSpeed + STEER);
-	  motor[backRight] = motor[frontRight] = linearize(driveSpeed - STEER);
-	  DIRECTION += 2 * STEER * DRIVE_SPEED_CONTROL_PERIOD_MSEC / ROBOT_RADIUS;
+	  int left = linearize(driveSpeed + STEER);
+	  int right = linearize(driveSpeed - STEER);
+	  motor[backLeft] = motor[frontLeft] = left;
+	  motor[backRight] = motor[frontRight] = right;
+	  float deltaDirection = 2 * STEER * DRIVE_SPEED_CONTROL_PERIOD_MSEC / ROBOT_RADIUS;
+	  DIRECTION += deltaDirection
 	  while (DIRECTION >= 2 * PI) {
 	  	DIRECTION -= 2 * PI;
 	  }
 	  while (DIRECTION < 0) {
 		  DIRECTION += 2 * PI;
 		}
-		RobotX += driveSpeed * cos(driveSpeed);
-		RobotY += driveSpeed * sin(driveSpeed);
+		 // keep track of robot's X and Y positions
+		RobotX += driveSpeed * cos(DIRECTION);
+		RobotY += driveSpeed * sin(DIRECTION);
 
 
 	  // Hogging CPU here ensures that all 4 motors receive
