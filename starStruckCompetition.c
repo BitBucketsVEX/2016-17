@@ -130,8 +130,18 @@ task autonomous() {
 	//startTask(drivePositionControl);
 
 
-
-	forward(2 * MAT_LENGTH, 10);
+	//turn(90, 1);
+	/*forward(2 * MAT_LENGTH, 10);
+	wait1Msec(10000);*/
+	short armControlPriority = getTaskPriority(usercontrol) + 1;
+	startTask(armControl, armControlPriority);
+	moveTo(MAT_LENGTH, 2 * MAT_LENGTH, 1, 5);
+	//wait1Msec(6000);
+	setArmPosition(120.0);
+	wait1Msec(3000);
+	setArmPosition(0.0);
+	wait1Msec(3000);
+	moveTo(0, 0, 1, 5);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -148,17 +158,15 @@ bool partialArmUp = false;
 bool auto = false;
 
 task usercontrol() {
-	forward(2 * MAT_LENGTH, 10);
+
 	// Assume arm controls and drive controls have been constructed
 
 	// Place the motor control loop at higher priority than the main loop
 	// so we can ensure more stable application of time. The motor control
 	// loop must sleep long enough for other tasks to get execution time
-	short armControlPriority = getTaskPriority(usercontrol) + 1;
-	startTask(armControl, armControlPriority);
 
 	// Only need drive speed control in user control mode
-	//startTask(driveSpeedControl);
+	startTask(driveSpeedControl);
 
 	for EVER {
 		// Read the joysticks for drive control
