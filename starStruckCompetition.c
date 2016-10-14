@@ -168,10 +168,9 @@ task usercontrol() {
 		int y = deadband(vexRT[Ch3]);
 		driveSpeed = (int) sqrt(x * x + y * y);
 		turnCoef = ATAN(y, x);*/
-		/*if (!auto) {
-			driveSpeed = deadband(vexRT[Ch3]);
-			turnCoef   = deadband(vexRT[Ch1]);
-		}*/
+
+		driveSpeed = deadband(vexRT[Ch3]);
+		turnCoef   = deadband(vexRT[Ch1]);
 
 
 	  //int cmd = abs(deadband(vexRT[Ch1]));

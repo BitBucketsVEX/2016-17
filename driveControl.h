@@ -10,6 +10,28 @@
 // Drive Control
 // -----------------------------------------------------------------------------
 
+
+
+
+
+
+// -----------------------------------------------------------------------------
+// for autonomous.h
+float DIRECTION = PI / 2; // radians
+const float ROBOT_RADIUS = 9 * 2.54 / 100;
+float RobotX = 0;
+float RobotY = 0;
+// -----------------------------------------------------------------------------
+
+
+const float RADIUS_OF_WHEEL = 3.75 * 2.54 / 100; // in meters
+const float WHEEL_VEL = MAX_RPM * PI * RADIUS_OF_WHEEL / 30; // Max wheel speed in m/s
+
+const float MAT_LENGTH = 1.18956666667; // you guesses it! meters!
+
+
+
+
 int linear[129] = {
 	0, 0, 18, 18, 19, 19, 19, 19, 19, 19, 20, 20, 20, 20,
 	21, 21, 21, 21, 21, 21, 22, 22, 22, 22, 23, 23, 24, 24, 24, 25, 25, 25,
@@ -83,6 +105,16 @@ task driveSpeedControl() {
 	  hogCPU();
 	  motor[backLeft] = motor[frontLeft] = linearize(driveSpeed + STEER);
 	  motor[backRight] = motor[frontRight] = linearize(driveSpeed - STEER);
+	  DIRECTION += 2 * STEER * DRIVE_SPEED_CONTROL_PERIOD_MSEC / ROBOT_RADIUS;
+	  while (DIRECTION >= 2 * PI) {
+	  	DIRECTION -= 2 * PI;
+	  }
+	  while (DIRECTION < 0) {
+		  DIRECTION += 2 * PI;
+		}
+		RobotX += driveSpeed * cos(driveSpeed);
+		RobotY += driveSpeed * sin(driveSpeed);
+
 
 	  // Hogging CPU here ensures that all 4 motors receive
 	  // commands "atomically"
