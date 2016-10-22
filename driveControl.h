@@ -100,13 +100,33 @@ task driveSpeedControl() {
 	for EVER {
 		// Linearizing will also limit the output
 	  int STEER = (MAX_STEER * turnCoef / 100);
-
-	  // Minimize latency while hogging CPU
-	  hogCPU();
 	  int left = linearize(driveSpeed + STEER);
 	  int right = linearize(driveSpeed - STEER);
+
+	  // Minimize latency while hogging CPU
+	  // Hogging CPU here ensures that all 4 motors receive
+	  // commands "atomically", but we hold the state only
+	  // as long as we absolutely need to so.
+	  hogCPU();
+
+	  /// TODO: Consider slaving motors
+	  /// OR, at minimum put each motor assignmen on a separate line
+	  // to speed it up slightly (eliminates an I/O read if command not shadowed)
 	  motor[backLeft] = motor[frontLeft] = left;
 	  motor[backRight] = motor[frontRight] = right;
+		releaseCPU();
+
+		/// TODO: This direction/position estimate is open loop based on
+		/// assumed period and will not be able maintain accuracy in any deterministic way.
+		/// We will need to use position encoders and keep track of
+		/// the difference between the encoders for direction
+		///
+		/// IF we decide to use a time-based backup it will only start
+		/// if a sensor fault is detected ... which for now is too much
+		/// complexity for our little robot. But if we do, the time MUST
+		/// be based on a measured time NOT the scheduled time.
+		/// Measuring time is via the time1[] variable and simply needs to
+		/// be retained each time we reach the top of the loop
 	  float deltaDirection = 2 * STEER * DRIVE_SPEED_CONTROL_PERIOD_MSEC / ROBOT_RADIUS;
 	  DIRECTION += deltaDirection;
 	  while (DIRECTION >= 2 * PI) {
@@ -120,10 +140,6 @@ task driveSpeedControl() {
 		RobotY += driveSpeed * sin(DIRECTION);
 
 
-	  // Hogging CPU here ensures that all 4 motors receive
-	  // commands "atomically"
-
-		releaseCPU();
 
 		#ifdef TEST_SIM
     // only display in emulator
@@ -138,9 +154,23 @@ task driveSpeedControl() {
 // other similar demos to process command sequences maintaining the
 // heading and field position
 task drivePositionControl() {
-	// TODO: Insert code similar to arm control but this time
-  // we will keep track of (x,y) and heading, stopping only
-  // when both are achieved
+	/// TODO: Insert code similar to arm control but this time
+  /// we will keep track of (x,y) and heading, stopping only
+  /// when both are achieved
+
+	/// TODO: The simplest thing to do is to:
+	///       1) turn in direction of position target
+	///       2) move to that position in a straight line
+	///       3) turn to final heading
+  /// HOWEVER, that protocol should NOT be here, but rather
+  /// in the commands being ingested here.
+  /// So, if both position and heading are commanded at the
+  /// same time, the heading should be ignored until the
+  /// position is achieved. There will be a little work
+  /// to ensure that position is deadbanded properly to
+  /// allow the turn to complete at the end... simplest
+  /// thing is to just send positioning commands and
+  /// heading as separate commands
 }
 
 #endif

@@ -4,6 +4,12 @@
 #include "motorControlTypes.h"
 
 
+/// TODO: All of these should send commands to a drivePositioningTask
+/// to avoid the openloop timing... these functions should use a
+/// wait-for semantic either by blocking on a semaphore or polling
+/// at some reasonable rate to see if the drive tasking reached the
+/// goal.
+
 void forward(float dist, float t) {
 	float mps = dist / t; // mps = m / s, aka velocity
 	// WHEEL_VEL = k * 127
