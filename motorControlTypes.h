@@ -42,10 +42,6 @@ const float DEGREES_PER_TICK = 1.0 / TICKS_PER_DEGREE;
 // is C and not C++, we will define separate functions
 // rather than encapsulate the desired behavior
 
-
-const long ARM_CONTROL_PERIOD_MSEC = 1; // moved from armControl.h for approximation of change in time;
-
-
 typedef struct {
 	tMotor mId;
 	tSensors sId;

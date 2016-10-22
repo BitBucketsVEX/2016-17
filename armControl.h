@@ -63,6 +63,8 @@ bool armControlInitialized = false;
 	unsigned int armCount = 0;
 #endif
 
+const long ARM_CONTROL_PERIOD_MSEC = 1;
+
 task armControl() {
 	if (!armControlInitialized) {
 		resetArmPosition();

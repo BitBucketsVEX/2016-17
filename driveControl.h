@@ -108,7 +108,7 @@ task driveSpeedControl() {
 	  motor[backLeft] = motor[frontLeft] = left;
 	  motor[backRight] = motor[frontRight] = right;
 	  float deltaDirection = 2 * STEER * DRIVE_SPEED_CONTROL_PERIOD_MSEC / ROBOT_RADIUS;
-	  DIRECTION += deltaDirection
+	  DIRECTION += deltaDirection;
 	  while (DIRECTION >= 2 * PI) {
 	  	DIRECTION -= 2 * PI;
 	  }
