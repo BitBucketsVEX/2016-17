@@ -158,6 +158,7 @@ bool partialArmUp = false;
 bool auto = false;
 
 task usercontrol() {
+	startTask(timer);
 
 	// Assume arm controls and drive controls have been constructed
 

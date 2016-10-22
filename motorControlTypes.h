@@ -56,6 +56,8 @@ typedef struct {
 	float biasDeg;
 	float prevError;
 	float intError;
+	int lastTime;
+	int delta_t_0;
 } motorControlType;
 
 // Define operations for the motorControlType (similar to what we might have in C++ so the concepts will port
@@ -74,6 +76,8 @@ void constructMotorControl(motorControlType *this, tMotor mId, tSensors sId, flo
 	this->biasDeg = biasDeg;
 	this->prevError = 0;
 	this->intError = 0;
+	this->lastTime = time1[timer1];
+	this->delta_t_0 = 0;
 }
 
 // Each motor can be set to an independent position
@@ -104,26 +108,46 @@ void maintainPosition(motorControlType *this) {
 	long encoder_tick = SensorValue[this->sId];		// Using shaft encoders for the moment
 	this->encoderRPM  = 0.0;	  // TODO: No derivative control at this time
 
-
-
 	this->encoderDeg = encoder_tick * DEGREES_PER_TICK;
 
 
 
-	float prevError = this->prevError;
-	float error = this->commandDeg - this->encoderDeg;
-	float futureError = 2 * error - prevError; // approximately, no derivative control yet, but for the future!
-	this->prevError = error;
-	this->intError += error; // no integral control yet, but for the future!
+	// values for exterpolation control
+
+	float delta_t_0 = this->delta_t_0;
+	float delta_t_1;
+	 // get change in time since last measurement
+	if (time1[timer1] < this->lastTime) {
+		delta_t_1 = (1000 - this->lastTime) + time1[timer1];
+	} else {
+		delta_t_1 = time1[timer1] - this->lastTime;
+	}
+	float delta_t_2 = 2 * delta_t_1 - delta_t_0; // approximation of next change in time;
 
 
 
-	if (abs(error) > 0) {
-		// make the speed proportional to the error
-	  //int lastPidSign = (this->pid != 0)? this->pid / abs(this->pid) : 1;
-	  this->pid = (int) (this->kp * error);
+	float e_0 = this->prevError;
+	float e_1 = this->commandDeg - this->encoderDeg;
+
+	float e_2 = e_1 * (1 + delta_t_2 / delta_t_1) - e_0 * (delta_t_2 / delta_t_1);
+
+	this->delta_t_0 = delta_t_1; // set previous change in time to change in time right now for use in cycle
+
+	// for more information about how these equations/values were derived, go to
+	// https://github.com/BitBucketsVEX/2016-17/blob/master/Derivative%20Control.pptx
+
+	this->prevError = e_1;
+	this->intError += e_1; // no integral control yet, but for the future!
+
+
+
+
+	if (abs(e_1) > 0) {
+		// make the speed proportional to the error, proportional to the cosine of the angle, and have exterpolation control
+	  this->pid = (int) (this->kp * e_1);
+	  // add
 	  this->pid += (int) (this->kb * cos((this->encoderDeg - this->biasDeg) * PI / 180));
-	 	//this->pid += (int) -futureError / ARM_CONTROL_PERIOD_MSEC;	no derivative
+	  this->pid += (int) e_2 / delta_t_2; // exterpolation control
 	 	//this->pid += (int) this->ki * this->intError; 							or integral control yet
 
 	  //this->pid = BOUND(this->pid, -MAX_MOTOR_COMMAND, MAX_MOTOR_COMMAND); //MAX(this->pid, MAX_MOTOR_COMMAND);
@@ -141,5 +165,11 @@ void maintainPosition(motorControlType *this) {
 	}
 }
 
-
+task timer() {
+	for EVER {
+		if (time1[timer1] >= 1000) {
+			clearTimer(timer1);
+		}
+	}
+}
 #endif
