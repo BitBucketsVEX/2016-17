@@ -1,4 +1,6 @@
 #pragma config(Sensor, dgtl1,  shaft,          sensorQuadEncoder)
+#pragma config(Sensor, dgtl3,  leftEncoder,    sensorQuadEncoder)
+#pragma config(Sensor, dgtl5,  rightEncoder,   sensorQuadEncoder)
 #pragma config(Motor,  port2,           frontRight,    tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port3,           frontLeft,     tmotorVex393_MC29, openLoop, reversed)
 #pragma config(Motor,  port4,           backRight,     tmotorVex393_MC29, openLoop)

@@ -13,14 +13,18 @@ struct motorControlType armMotors[4];
 
 // Functions to create and control arm motors as single call
 bool armMotorsConstructed = false;
+float armKp = 2.0;
+float armKi = 0.0;
+float armKd = 0.0;
+float armKb = 10.0;
 void constructArmMotorControls(void)
 {
 	if ( ! armMotorsConstructed)
 	{
-		constructMotorControl(&armMotors[0],topRight,     shaft, 2.0, 0.0, 0.0, 0.0, -59.0);	// Only proportional control at this time
-		constructMotorControl(&armMotors[1],topLeft,      shaft, 2.0, 0.0, 0.0, 0.0, -59.0);
-		constructMotorControl(&armMotors[2],bottomRight,  shaft, 2.0, 0.0, 0.0, 0.0, -59.0);
-		constructMotorControl(&armMotors[3],bottomLeft,   shaft, 2.0, 0.0, 0.0, 0.0, -59.0);
+		constructMotorControl(&armMotors[0],topRight,     shaft, armKp, armKi, armKd, armKb, -59.0);	// Only proportional control at this time
+		constructMotorControl(&armMotors[1],topLeft,      shaft, armKp, armKi, armKd, armKb, -59.0);
+		constructMotorControl(&armMotors[2],bottomRight,  shaft, armKp, armKi, armKd, armKb, -59.0);
+		constructMotorControl(&armMotors[3],bottomLeft,   shaft, armKp, armKi, armKd, armKb, -59.0);
 
 		armMotorsConstructed = true;
 	}

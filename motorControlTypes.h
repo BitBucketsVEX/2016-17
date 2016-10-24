@@ -102,11 +102,13 @@ void maintainPosition(motorControlType *this) {
 
 	this->encoderDeg = encoder_tick * DEGREES_PER_TICK;
 	float error = this->commandDeg - this->encoderDeg;
+
+	float bias = this->kb * cos((this->encoderDeg - this->biasDeg) * PI / 180)
 	if (abs(error) > 0) {
 		// make the speed proportional to the error
 	  //int lastPidSign = (this->pid != 0)? this->pid / abs(this->pid) : 1;
 	  this->pid = (int) (this->kp * error);
-	  this->pid += (int) (this->kb * cos((this->encoderDeg - this->biasDeg) * PI / 180));
+	  this->pid += (int) bias;
 	  // this->pid += lastPidSign* (int) (this->kd * this->encoder_rpm); // truncate to integer
 	  if (this->pid > MAX_MOTOR_COMMAND) {
 	  	this->pid = MAX_MOTOR_COMMAND;
@@ -116,7 +118,7 @@ void maintainPosition(motorControlType *this) {
 	  motor[this->mId] = this->pid;
 	} else {
 		// When within the target tolerance, stop.
-		motor[this->mId] = 0;
+		motor[this->mId] = (int)bias;
 	}
 }
 
