@@ -1,8 +1,10 @@
-#pragma config(Sensor, dgtl1,  shaft,          sensorQuadEncoder)
-#pragma config(Motor,  port2,           frontRight,    tmotorVex393_MC29, openLoop)
-#pragma config(Motor,  port3,           backLeft,     tmotorVex393_MC29, openLoop, reversed)
+#pragma config(Sensor, dgtl1,  shaft,          sensorNone)
+#pragma config(Sensor, dgtl2,  frontRightShaft, sensorQuadEncoder)
+#pragma config(Sensor, dgtl5,  frontLeftShaft, sensorQuadEncoder)
+#pragma config(Motor,  port2,           frontRight,    tmotorVex393_MC29, openLoop, encoderPort, dgtl2)
+#pragma config(Motor,  port3,           backLeft,      tmotorVex393_MC29, openLoop, reversed)
 #pragma config(Motor,  port4,           backRight,     tmotorVex393_MC29, openLoop)
-#pragma config(Motor,  port5,           frontLeft,      tmotorVex393_MC29, openLoop)
+#pragma config(Motor,  port5,           frontLeft,     tmotorVex393_MC29, openLoop, encoderPort, dgtl5)
 #pragma config(Motor,  port6,           topLeft,       tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port7,           topRight,      tmotorVex393_MC29, openLoop, reversed)
 #pragma config(Motor,  port8,           bottomLeft,    tmotorVex393_MC29, openLoop)
@@ -15,6 +17,7 @@
 #pragma competitionControl(Competition)
 #pragma autonomousDuration(20)
 #pragma userControlDuration(120)
+
 
 
 // Comment/uncomment this TEST_SIM flag to switch between real and emulation

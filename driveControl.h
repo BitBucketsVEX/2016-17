@@ -18,9 +18,12 @@
 // -----------------------------------------------------------------------------
 // for autonomous.h
 float DIRECTION = PI / 2; // radians
-const float ROBOT_RADIUS = 9 * 2.54 / 100;
+const float ROBOT_RADIUS = 9 * 2.54 / 100; // meters
 float RobotX = 0;
 float RobotY = 0;
+
+float leftWheelAngle = SensorValue[frontLeftShaft] * PI / 180;
+float rightWheelAngle = SensorValue[frontRightShaft] * PI / 180;
 // -----------------------------------------------------------------------------
 
 
@@ -127,7 +130,10 @@ task driveSpeedControl() {
 		/// be based on a measured time NOT the scheduled time.
 		/// Measuring time is via the time1[] variable and simply needs to
 		/// be retained each time we reach the top of the loop
-	  float deltaDirection = 2 * STEER * DRIVE_SPEED_CONTROL_PERIOD_MSEC / ROBOT_RADIUS;
+	  //float deltaDirection = 2 * STEER * DRIVE_SPEED_CONTROL_PERIOD_MSEC / ROBOT_RADIUS;
+		float deltaLeftWheel = (SensorValue[frontLeftShaft] * PI / 180) - leftWheelAngle;
+		float deltaRightWheel = (SensorValue[frontRightShaft] * PI / 180) - rightWheelAngle;
+		float deltaDirection = 2 * PI * (deltaRightWheel - deltaLeftWheel) * RADIUS_OF_WHEEL / ROBOT_RADIUS;
 	  DIRECTION += deltaDirection;
 	  while (DIRECTION >= 2 * PI) {
 	  	DIRECTION -= 2 * PI;
@@ -136,8 +142,8 @@ task driveSpeedControl() {
 		  DIRECTION += 2 * PI;
 		}
 		 // keep track of robot's X and Y positions
-		RobotX += driveSpeed * cos(DIRECTION);
-		RobotY += driveSpeed * sin(DIRECTION);
+		RobotX += (deltaRightWheel + deltaLeftWheel) * PI * RADIUS_OF_WHEEL * cos(DIRECTION);
+		RobotY += (deltaRightWheel + deltaLeftWheel) * PI * RADIUS_OF_WHEEL * sin(DIRECTION);
 
 
 
