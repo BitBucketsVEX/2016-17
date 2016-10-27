@@ -101,6 +101,7 @@ int turnCoef = 0; //The turning amount.
 
 task driveSpeedControl() {
 	for EVER {
+		// User control Period
 		// Linearizing will also limit the output
 	  int STEER = (MAX_STEER * turnCoef / 100);
 	  int left = linearize(driveSpeed + STEER);
@@ -130,10 +131,12 @@ task driveSpeedControl() {
 		/// be based on a measured time NOT the scheduled time.
 		/// Measuring time is via the time1[] variable and simply needs to
 		/// be retained each time we reach the top of the loop
-	  //float deltaDirection = 2 * STEER * DRIVE_SPEED_CONTROL_PERIOD_MSEC / ROBOT_RADIUS;
+
+		// Mostly autonomous
 		float deltaLeftWheel = (SensorValue[frontLeftShaft] * PI / 180) - leftWheelAngle;
 		float deltaRightWheel = (SensorValue[frontRightShaft] * PI / 180) - rightWheelAngle;
-		float deltaDirection = 2 * PI * (deltaRightWheel - deltaLeftWheel) * RADIUS_OF_WHEEL / ROBOT_RADIUS;
+		//float deltaDirection = PI * RADIUS_OF_WHEEL * (deltaRightWheel - deltaLeftWheel) / (180 * ROBOT_RADIUS);
+		float deltaDirection = (deltaRightWheel - deltaLeftWheel) * RADIUS_OF_WHEEL / ROBOT_RADIUS * PI / 180;
 	  DIRECTION += deltaDirection;
 	  while (DIRECTION >= 2 * PI) {
 	  	DIRECTION -= 2 * PI;
@@ -142,14 +145,14 @@ task driveSpeedControl() {
 		  DIRECTION += 2 * PI;
 		}
 		 // keep track of robot's X and Y positions
-		RobotX += (deltaRightWheel + deltaLeftWheel) * PI * RADIUS_OF_WHEEL * cos(DIRECTION);
-		RobotY += (deltaRightWheel + deltaLeftWheel) * PI * RADIUS_OF_WHEEL * sin(DIRECTION);
+		RobotX += (deltaRightWheel + deltaLeftWheel) * PI / 180 * RADIUS_OF_WHEEL * cos(DIRECTION);
+		RobotY += (deltaRightWheel + deltaLeftWheel) * PI / 180 * RADIUS_OF_WHEEL * sin(DIRECTION);
 
 
 
 		#ifdef TEST_SIM
     // only display in emulator
-			displayLCDNumber(0, 8, (driveCount++)%100, 3);
+			displayLCDNumber(0, 8, (driveCount++) % 100, 3);
 		#endif
 
 		wait1Msec(DRIVE_SPEED_CONTROL_PERIOD_MSEC);
