@@ -96,19 +96,90 @@ task driveSpeedControl() {
 const float WHEEL_TRACK_m  = 15.25 * IN_2_M
 const float TRACK_RADIUS_m = WHEEL_TRACK_m / 2.0;
 const float WHEEL_DIAMETER_m = 4.0 * IN_2_M;
+const float WHEEL_RADIUS_M   = WHEEL_DIAMETER_m / 2.0;
 
+// A set of the motors we want to position control during the drivePositionControl task
+struct motorControlType driveMotors[4];
 
-float RobotX = 0;
-float RobotY = 0;
+// Functions to create and control drive motors as single call
+bool driveMotorsConstructed = false;
+float driveKp = 2.0;
+float driveKi = 0.0;
+float driveKd = 0.0;
+float driveKb = 0.0;
+
+// Unlike arm control, the left/right is important here
+// Provide index to our structure to make mapping easier
+enum DriveMotorIds
+{
+	DMI_FRONT_RIGHT,
+	DMI_FRONT_LEFT,
+	DMI_BACK_RIGHT,
+	DMI_BACK_LEFT
+};
+
+void constructDriveMotorControls(void)
+{
+	if ( ! driveMotorsConstructed)
+	{
+		constructMotorControl(&driveMotors[DMI_FRONT_RIGHT], frontRight, rightEncoder, driveKp, driveKi, driveKd, driveKb, 0.0);
+		constructMotorControl(&driveMotors[DMI_FRONT_LEFT],  frontLeft,  leftEncoder,  driveKp, driveKi, driveKd, driveKb, 0.0);
+		constructMotorControl(&driveMotors[DMI_BACK_RIGHT],  backRight,  rightEncoder, driveKp, driveKi, driveKd, driveKb, 0.0);
+		constructMotorControl(&driveMotors[DMI_BACK_LEFT],   backLeft,   leftEncoder,  driveKp, driveKi, driveKd, driveKb, 0.0);
+
+		driveMotorsConstructed = true;
+	}
+}
+
+void resetDrivePosition(void)
+{
+	for (int i = 0; i < LENGTH(driveMotors); ++i)
+	{
+		resetPosition(&driveMotors[i]);
+	}
+}
+
+// Later, we will keep track of where we are
+float RobotX_m = 0.0;
+float RobotY_m = 0.0;
+float RobotHeading_deg = 0.0;
 
 
 // move - relative distance (meters) from current position and in current direction
 void move(float dist_m)
 {
-	/// TODO:
-  // Current encoder position is relative 0
-  // Compute new encoder position
-  // Command control to make it happen
+	// Required wheel angle is distance / radius
+  float commandAngle_deg = RAD_2_DEG * (dist_m / WHEEL_RADIUS_M);
+
+	// Hog the CPU while setting all the positions
+  // to ensure they change atomically even for the high priority
+  // task
+	hogCPU();
+
+	// When moving we can set all of the motors the same
+	for (int i = 0; i < LENGTH(driveMotors); ++i)
+	{
+		// Use the current encoder position associate with each motor
+	  // to command the correct offset
+	  float angle_deg = getPosition(&driveMotors[i]) + commandAngle_deg;
+		setPosition(&driveMotors[i], angle_deg);
+	}
+
+	releaseCPU();
+
+	// Wait for position to be reached
+	// Two options
+	//	1) Busy-wait by sleeping/polling
+	//  2) Use a mutex or other notification
+
+	// When the motion is complete we can update the location
+	// I.e., Add the distance along a vector in the current heading direction
+	// NOTE: This will be approximate since the position encoding and the
+	// motor shutdown are not precise, but much more precise than a time-based
+	// solution.
+	// To improve accuracy later we would use other sensors to measure location
+	// and correct our internal variables.
+
 }
 
 // turn - relative angle (degrees) from current direction
@@ -131,7 +202,7 @@ void moveTo(float x, float y)
 // other similar demos to process command sequences maintaining the
 // heading and field position
 task drivePositionControl() {
-	// TODO: Insert code similar to arm control but this time
+	// TODO: Insert code similar to drive control but this time
   // we will keep track of (x,y) and heading, stopping only
   // when both are achieved
 }

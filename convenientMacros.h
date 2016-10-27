@@ -6,6 +6,8 @@
 
 // Unit conversion
 #define IN_2_M	(0.0254)
+#define RAD_2_DEG	(180.0/PI)
+#define DEG_2_RAD (PI/180.)
 
 // Convenient macros
 #define EVER (;;)
