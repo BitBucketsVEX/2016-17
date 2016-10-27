@@ -21,10 +21,10 @@ void constructArmMotorControls(void)
 {
 	if ( ! armMotorsConstructed)
 	{
-		constructMotorControl(&armMotors[0],topRight,     armEncoder, armKp, armKi, armKd, armKb, -59.0);	// Only proportional control at this time
-		constructMotorControl(&armMotors[1],topLeft,      armEncoder, armKp, armKi, armKd, armKb, -59.0);
-		constructMotorControl(&armMotors[2],bottomRight,  armEncoder, armKp, armKi, armKd, armKb, -59.0);
-		constructMotorControl(&armMotors[3],bottomLeft,   armEncoder, armKp, armKi, armKd, armKb, -59.0);
+		constructMotorControl(&armMotors[0],topRight,     armEncoder, armKp, armKi, armKd, armKb, -55.0);	// Only proportional control at this time
+		constructMotorControl(&armMotors[1],topLeft,      armEncoder, armKp, armKi, armKd, armKb, -55.0);
+		constructMotorControl(&armMotors[2],bottomRight,  armEncoder, armKp, armKi, armKd, armKb, -55.0);
+		constructMotorControl(&armMotors[3],bottomLeft,   armEncoder, armKp, armKi, armKd, armKb, -55.0);
 
 		armMotorsConstructed = true;
 	}
