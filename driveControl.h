@@ -1,4 +1,5 @@
 // VEX Team 5485 Drive Control
+// Drive control contains both manual and autonomous support functions
 
 // Only include this once per scope to avoid duplicate definition warnings
 #ifndef DRIVE_CONTROL_H
@@ -77,6 +78,53 @@ task driveSpeedControl() {
 
 		wait1Msec(DRIVE_SPEED_CONTROL_PERIOD_MSEC);
 	}
+}
+
+// ***************************************************************
+// Drive Position Control
+//
+// Support functions for autonomous drive are
+//		move     - Relative motion ( positive = forward, negative = backward)
+//		moveTo   - field postion via turnTo, forward, turnTo
+//		turn		 - Relative motion
+//		turnTo   - field orientation
+//
+// Task responds to enable/disable and command from above funcions
+//
+// The global variables define the control for the task
+// ***************************************************************
+const float WHEEL_TRACK_m  = 15.25 * IN_2_M
+const float TRACK_RADIUS_m = WHEEL_TRACK_m / 2.0;
+const float WHEEL_DIAMETER_m = 4.0 * IN_2_M;
+
+
+float RobotX = 0;
+float RobotY = 0;
+
+
+// move - relative distance (meters) from current position and in current direction
+void move(float dist_m)
+{
+	/// TODO:
+  // Current encoder position is relative 0
+  // Compute new encoder position
+  // Command control to make it happen
+}
+
+// turn - relative angle (degrees) from current direction
+void turn(float angle_deg)
+{
+	/// TODO:
+}
+
+void turnTo(float deg)
+{
+
+}
+
+void moveTo(float x, float y)
+{
+
 }
 
 // drive position control is only used during autonomous and

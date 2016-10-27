@@ -4,6 +4,9 @@
 #ifndef CONVENIENT_MACROS_H
 #define CONVENIENT_MACROS_H
 
+// Unit conversion
+#define IN_2_M	(0.0254)
+
 // Convenient macros
 #define EVER (;;)
 #define LENGTH(x) (sizeof(x)/sizeof(x[0]))

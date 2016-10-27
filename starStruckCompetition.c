@@ -143,6 +143,8 @@ task autonomous() {
 
 bool armUp = false;
 bool partialArmUp = false;
+int frontback = 1;
+TVexJoysticks turnControl = Ch4;
 
 task usercontrol() {
 
@@ -157,12 +159,32 @@ task usercontrol() {
 	// Only need drive speed control in user control mode
 	startTask(driveSpeedControl);
 
-	for EVER {
+	for EVER
+	{
+		// Create toggle to switch front and back
+	  if (vexRT[Btn8D] == 1)
+	  {
+	  	frontback = -1;
+	  }
+	  else if (vexRT[Btn8U] == 1)
+	  {
+	  	frontback = 1;
+	  }
+
+	  if (vexRT[Btn8R] == 1)
+	  {
+	  	turnControl = Ch1;
+	  }
+	  else if (vexRT[Btn8L] == 1)
+	  {
+	  	turnControl = Ch4;
+	  }
+
 		// Read the joysticks for drive control
 	  // passing the latest command for the drive speed task
 	  // to pick up on next cycle
-		driveSpeed = deadband(vexRT[Ch3]);
-		turnCoef   = deadband(vexRT[Ch1]);
+		driveSpeed = frontback * deadband(vexRT[Ch3]);
+		turnCoef   = deadband(vexRT[turnControl]);
 
 	  //int cmd = abs(deadband(vexRT[Ch1]));
 	  //motor[topRight] = MAX(cmd,MAX_MOTOR_COMMAND);
@@ -171,16 +193,15 @@ task usercontrol() {
 	  //motor[bottomLeft] = MAX(cmd,MAX_MOTOR_COMMAND);
 
 		// The following is VERY EARLY TEST CODE ONLY
-		if (vexRT[Btn5D] == 1)
+		if (vexRT[Btn5U] == 1)
 		{
 			if ( ! armUp)
 			{
-
 				setArmPosition(120.0);
 				armUp = true;
 			}
 		}
-		else
+		else if (vexRT[Btn5D] == 1)
 		{
 			if (armUp)
 			{
@@ -189,14 +210,18 @@ task usercontrol() {
 			}
 		}
 
-		if (vexRT[Btn6U] == 1) {
-			if (!partialArmUp) {
+		if (vexRT[Btn6U] == 1)
+		{
+			if (!partialArmUp)
+			{
 				setArmPosition(60.0);
 				partialArmUp = true;
 			}
-		} else if (vexRT[Btn6D] == 1) {
-			if  (partialArmUp) {
-				setArmPosition(0);
+		} else if (vexRT[Btn6D] == 1)
+		{
+			if  (partialArmUp)
+			{
+				setArmPosition(0.0);
 				partialArmUp = false;
 			}
 		}
