@@ -79,23 +79,31 @@ void constructMotorControl(motorControlType *this, tMotor mId, tSensors sId, flo
 // to find all uses
 
 // For every "set" there is a "get" function
-void setPosition(motorControlType *this, float positionDeg) {
+void setPosition(motorControlType *this, float positionDeg)
+{
 	this->commandDeg = positionDeg;
 }
 
 // In this case the get function is not the inverse of the set
 // Instead we will return the latest encoder position as read
 // by the maintainPosition function
-float getPosition(motorControlType *this) {
+float getPosition(motorControlType *this)
+{
 	return this->encoderDeg;
 }
+float getLastCommand(motorControlType *this)
+{
+	return this->commandDeg;
+}
 
-void resetPosition(motorControlType *this) {
+void resetPosition(motorControlType *this)
+{
 		SensorValue[this->sId] = 0;	// Use the shaft encoder rather than integrated encoders
 }
 
 // A function to actually apply the control to each motor
-void maintainPosition(motorControlType *this) {
+void maintainPosition(motorControlType *this)
+{
 	long encoder_tick = SensorValue[this->sId];		// Using shaft encoders for the moment
 	this->encoderRPM  = 0.0;	  // TODO: No derivative control at this time
 
@@ -103,20 +111,27 @@ void maintainPosition(motorControlType *this) {
 	this->encoderDeg = encoder_tick * DEGREES_PER_TICK;
 	float error = this->commandDeg - this->encoderDeg;
 
-	float bias = this->kb * cos((this->encoderDeg - this->biasDeg) * PI / 180)
-	if (abs(error) > 0) {
+	float bias = this->kb * cos((this->encoderDeg - this->biasDeg) * PI / 180);
+
+	if (abs(error) > 0)
+	{
 		// make the speed proportional to the error
 	  //int lastPidSign = (this->pid != 0)? this->pid / abs(this->pid) : 1;
 	  this->pid = (int) (this->kp * error);
 	  this->pid += (int) bias;
 	  // this->pid += lastPidSign* (int) (this->kd * this->encoder_rpm); // truncate to integer
-	  if (this->pid > MAX_MOTOR_COMMAND) {
+	  if (this->pid > MAX_MOTOR_COMMAND)
+	  {
 	  	this->pid = MAX_MOTOR_COMMAND;
-	  } else if (this->pid < -MAX_MOTOR_COMMAND) {
+	  }
+	  else if (this->pid < -MAX_MOTOR_COMMAND)
+	  {
 	  	this->pid = -MAX_MOTOR_COMMAND;
 	  }
 	  motor[this->mId] = this->pid;
-	} else {
+	}
+	else
+	{
 		// When within the target tolerance, stop.
 		motor[this->mId] = (int)bias;
 	}

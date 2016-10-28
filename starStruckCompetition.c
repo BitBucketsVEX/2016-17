@@ -102,10 +102,12 @@
 //                                                                                    //
 ////////////////////////////////////////////////////////////////////////////////////////
 
-void pre_auton() {
+void pre_auton()
+{
 	bStopTasksBetweenModes = true;
 
 	constructArmMotorControls();
+	constructDriveMotorControls();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -117,19 +119,32 @@ void pre_auton() {
 //
 /////////////////////////////////////////////////////////////////////////////////////////
 
-task autonomous() {
+bool autonomousComplete = false;
+
+task autonomous()
+{
 	// Assume arm control and drive controls have been constructed
 
-	// Place the motor control loop at higher priority than the main loop
+	// Place the motor control loops at higher priority than the main loop
 	// so we can ensure more stable application of time. The motor control
 	// loop must sleep long enough for other tasks to get execution time
-	//short armControlPriority = getTaskPriority(autonomous) + 1;
-	//startTask(armControl, armControlPriority);
+	short controlPriority = getTaskPriority(autonomous) + 1;
 
-	//// Need both drive speed and drive position control during autonomous mode
-	//startTask(driveSpeedControl);
-	//startTask(drivePositionControl);
+	// Need arm control during autonomous mode
+	startTask(armControl, controlPriority);
 
+	// Need drive position control during autonomous mode
+	startTask(drivePositionControl, controlPriority);
+
+	move(0.1);
+	wait1Msec(1000);
+	move(-0.1);
+	wait1Msec(1000);
+	move(0.3);
+	wait1Msec(1000);
+	move(-0.3);
+
+	autonomousComplete = true;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -146,7 +161,13 @@ bool partialArmUp = false;
 int frontback = 1;
 TVexJoysticks turnControl = Ch4;
 
-task usercontrol() {
+task usercontrol()
+{
+	//startTask(autonomous);
+	//while (! autonomousComplete)
+	//{
+	//	EndTimeSlice();
+	//}
 
 	// Assume arm controls and drive controls have been constructed
 
@@ -171,6 +192,7 @@ task usercontrol() {
 	  	frontback = 1;
 	  }
 
+	  // Create toggle to switch joystick right/left
 	  if (vexRT[Btn8R] == 1)
 	  {
 	  	turnControl = Ch1;
@@ -186,44 +208,24 @@ task usercontrol() {
 		driveSpeed = frontback * deadband(vexRT[Ch3]);
 		turnCoef   = deadband(vexRT[turnControl]);
 
-	  //int cmd = abs(deadband(vexRT[Ch1]));
-	  //motor[topRight] = MAX(cmd,MAX_MOTOR_COMMAND);
-	  //motor[topLeft] = MAX(cmd,MAX_MOTOR_COMMAND);
-	  //motor[bottomRight] = MAX(cmd,MAX_MOTOR_COMMAND);
-	  //motor[bottomLeft] = MAX(cmd,MAX_MOTOR_COMMAND);
-
-		// The following is VERY EARLY TEST CODE ONLY
+		// Use up/down buttons for all the way up or down
 		if (vexRT[Btn5U] == 1)
 		{
-			if ( ! armUp)
-			{
-				setArmPosition(120.0);
-				armUp = true;
-			}
+			setArmPosition(120.0);
 		}
 		else if (vexRT[Btn5D] == 1)
 		{
-			if (armUp)
-			{
-				setArmPosition(0.0);
-				armUp = false;
-			}
+			setArmPosition(0.0);
 		}
 
+		// Use up/down buttons for 1/2 way up or all the way down
 		if (vexRT[Btn6U] == 1)
 		{
-			if (!partialArmUp)
-			{
-				setArmPosition(60.0);
-				partialArmUp = true;
-			}
-		} else if (vexRT[Btn6D] == 1)
+			setArmPosition(60.0);
+		}
+		else if (vexRT[Btn6D] == 1)
 		{
-			if  (partialArmUp)
-			{
-				setArmPosition(0.0);
-				partialArmUp = false;
-			}
+			setArmPosition(0.0);
 		}
 
 		EndTimeSlice();

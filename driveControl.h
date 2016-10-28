@@ -11,7 +11,8 @@
 // Drive Control
 // -----------------------------------------------------------------------------
 
-int linear[129] = {
+int linear[129] =
+{
 	0, 0, 18, 18, 19, 19, 19, 19, 19, 19, 20, 20, 20, 20,
 	21, 21, 21, 21, 21, 21, 22, 22, 22, 22, 23, 23, 24, 24, 24, 25, 25, 25,
 	25, 26, 26, 26, 26, 27, 27, 27, 27, 28, 28, 29, 29, 29, 29, 30, 30, 30,
@@ -22,24 +23,31 @@ int linear[129] = {
 	87, 87, 88, 90, 96, 105, 105
 };
 
-int linearize(int vel) {
+int linearize(int vel)
+{
 	int pwm;
 
-	if (vel > MAX_MOTOR_COMMAND) {
+	if (vel > MAX_MOTOR_COMMAND)
+  {
 		vel = MAX_MOTOR_COMMAND;
 	}
-	if (vel < -MAX_MOTOR_COMMAND) {
+	if (vel < -MAX_MOTOR_COMMAND)
+	{
 		vel = -MAX_MOTOR_COMMAND;
 	}
-	if (vel < 0) {
+	if (vel < 0)
+	{
 		pwm = -linear[-vel];
-	} else {
+	}
+	else
+	{
 		pwm = linear[vel];
 	}
 	return pwm;
 }
 
-int deadband(int vel) {
+int deadband(int vel)
+{
 	return ((abs(vel) < 24) ? 0 : vel);
 }
 
@@ -56,8 +64,10 @@ int turnCoef = 0; //The turning amount.
 	unsigned int driveCount = 0;
 #endif
 
-task driveSpeedControl() {
-	for EVER {
+task driveSpeedControl()
+{
+	for EVER
+	{
 		// Linearizing will also limit the output
 	  const int STEER = (MAX_STEER * turnCoef / 100);
 
@@ -93,7 +103,7 @@ task driveSpeedControl() {
 //
 // The global variables define the control for the task
 // ***************************************************************
-const float WHEEL_TRACK_m  = 15.25 * IN_2_M
+const float WHEEL_TRACK_m  = 15.25 * IN_2_M;
 const float TRACK_RADIUS_m = WHEEL_TRACK_m / 2.0;
 const float WHEEL_DIAMETER_m = 4.0 * IN_2_M;
 const float WHEEL_RADIUS_M   = WHEEL_DIAMETER_m / 2.0;
@@ -103,10 +113,19 @@ struct motorControlType driveMotors[4];
 
 // Functions to create and control drive motors as single call
 bool driveMotorsConstructed = false;
-float driveKp = 2.0;
+float driveKp = 0.5;
 float driveKi = 0.0;
 float driveKd = 0.0;
 float driveKb = 0.0;
+
+// Later, we will keep track of where we are
+bool moving = false;									// keep track of commands in progress or incomplete
+bool updated = true;
+
+float RobotX_m = 0.0;									// x is +right 				(0 , 0) is the original robot position
+float RobotY_m = 0.0;									// y is +toward goal
+float RobotOrientation_rad = PI/2.0;	// 0 angle is along x-axis
+float RobotHeading_deg = (RobotOrientation_rad - PI/2.0) * RAD_2_DEG;					// 0 is toward the goal... keep in degrees for debuging
 
 // Unlike arm control, the left/right is important here
 // Provide index to our structure to make mapping easier
@@ -118,6 +137,9 @@ enum DriveMotorIds
 	DMI_BACK_LEFT
 };
 
+// This constructor function initializes the struct array
+// This is necessary because RobotC does not support the C99 standard
+// for initializer lists
 void constructDriveMotorControls(void)
 {
 	if ( ! driveMotorsConstructed)
@@ -131,6 +153,7 @@ void constructDriveMotorControls(void)
 	}
 }
 
+// Always initialize to a known position
 void resetDrivePosition(void)
 {
 	for (int i = 0; i < LENGTH(driveMotors); ++i)
@@ -139,11 +162,51 @@ void resetDrivePosition(void)
 	}
 }
 
-// Later, we will keep track of where we are
-float RobotX_m = 0.0;
-float RobotY_m = 0.0;
-float RobotHeading_deg = 0.0;
+void maintainDrivePosition(void)
+{
+	for (int i = 0; i < LENGTH(driveMotors); ++i)
+	{
+		// Assume that drive position is controlled at high priority
+		// eliminating the need to hog the CPU
+		maintainPosition(&driveMotors[i]);
+	}
+}
 
+// getRemainingDistance_m - returns the remaining distance to go
+// based on the command and position of each motor
+float getRemainingDistance_m(void)
+{
+	// Average the distance to go based for all of the motors
+	// even if the same encoder is used for multiple motors
+	// This keeps the code simple and robust to changes in
+	// the number of motors and encoders.
+	float remainingAngle_deg = 0.0;
+	for (int i = 0; i < LENGTH(driveMotors); ++i)
+	{
+		// Accumulate the angle remaining
+		remainingAngle_deg += abs(getLastCommand(driveMotors[i]) - getPosition(driveMotors[i]));
+	}
+
+	// Average the angle of all of the motors (we assume they are moving in the same direction)
+	remainingAngle_deg /= LENGTH(driveMotors);
+
+	// Convert the remaining wheel angle to distance
+	return (remainingAngle_deg * DEG_2_RAD) * WHEEL_RADIUS_M;
+}
+
+// Polling function to test for all motors reaching their desired position
+bool isDriveStopped(void)
+{
+	bool isStopped = true;
+	for (int i = 0; i < LENGTH(driveMotors); ++i)
+	{
+		// Consider a drive motor stopped when within 1 degree
+	  // Accumulate the status; if any one motor has not stopped we return false
+		isStopped &= (abs(getLastCommand(driveMotors[i]) - getPosition(driveMotors[i])) > 1);
+	}
+
+	return isStopped;
+}
 
 // move - relative distance (meters) from current position and in current direction
 void move(float dist_m)
@@ -155,6 +218,8 @@ void move(float dist_m)
   // to ensure they change atomically even for the high priority
   // task
 	hogCPU();
+	updated = false;
+	moving = true;
 
 	// When moving we can set all of the motors the same
 	for (int i = 0; i < LENGTH(driveMotors); ++i)
@@ -171,40 +236,114 @@ void move(float dist_m)
 	// Two options
 	//	1) Busy-wait by sleeping/polling
 	//  2) Use a mutex or other notification
+	//
+	// For simplicity we will simply busy-wait for all of the motors to
+	// reach their respective commands (to within a tolerance)
+	// This wait is indefinitie, for now no timeout (could add later)
+	// The point is that we will give up our timeslice as efficiently
+	// as possible since we are not doing anything useful.
+	//
+	// There is one advantage to the polling; it allows us to monitor
+	// the progress and use it to keep track of the vector, so far.
+	// If we were to be disabled (task stops) we would have a pretty
+	// good idea where we were at the moment we stopped... not perfect
+	// but pretty good
+	float distanceTraveled_m = 0.0;
+  while ( ! isDriveStopped())
+  {
+  	// Get the remaining distance to compute how far we moved so far
+    // Keep doing this
+  	distanceTraveled_m = dist_m - getRemainingDistance_m();
+
+  	EndTimeSlice();
+  }
+
 
 	// When the motion is complete we can update the location
 	// I.e., Add the distance along a vector in the current heading direction
 	// NOTE: This will be approximate since the position encoding and the
 	// motor shutdown are not precise, but much more precise than a time-based
 	// solution.
+  //
+  // We will assume that the heading error caused by the asymmetric encoding
+  // is negligible at the moment (i.e., we used a average via the getRemainingDistance_m
+  // function, above)
+  //
 	// To improve accuracy later we would use other sensors to measure location
 	// and correct our internal variables.
+  moving = false;
 
+	// Compute the vector that we will move
+  float x_m = distanceTraveled_m * cos(RobotOrientation_rad);
+  float y_m = distanceTraveled_m * sin(RobotOrientation_rad);
+
+  hogCPU();
+
+  RobotX_m += x_m;
+  RobotY_m += y_m;
+
+  updated = true;
+
+  releaseCPU();
 }
 
 // turn - relative angle (degrees) from current direction
 void turn(float angle_deg)
 {
-	/// TODO:
+	/// TODO: The logic is similar to the above move() code
+
 }
 
+// Turn to a specific heading (0 is toward goal)
 void turnTo(float deg)
 {
+	// Compute angle difference between current heading
+  // and desired heading
+
+	// Turn the specified amount
 
 }
 
 void moveTo(float x, float y)
 {
+	// Compute vector from here to there
 
+	// Compute angle between current orientation and desired vector
+
+	// Turn the required angle or turn to the required heading
+
+	// Move the distance equal to the vector magnitude
 }
 
 // drive position control is only used during autonomous and
 // other similar demos to process command sequences maintaining the
 // heading and field position
-task drivePositionControl() {
+
+bool drivePositionControlInitialized = false;
+const long DRIVE_POSITION_CONTROL_PERIOD_MSEC = 20;
+
+task drivePositionControl()
+{
 	// TODO: Insert code similar to drive control but this time
   // we will keep track of (x,y) and heading, stopping only
   // when both are achieved
+	if ( ! drivePositionControlInitialized)
+	{
+		resetDrivePosition();
+		drivePositionControlInitialized = true;
+	}
+
+	for EVER
+	{
+		maintainDrivePosition();
+
+#ifdef TEST_SIM
+    // only display in emulator
+		displayLCDNumber(1, 2, (driveCount++)%100, 3);
+#endif
+
+		wait1Msec(DRIVE_POSITION_CONTROL_PERIOD_MSEC);	// Let lower priority tasks execute before resuming control
+   }
 }
 
 #endif
