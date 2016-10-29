@@ -41,9 +41,11 @@ const float DEGREES_PER_TICK = 1.0 / TICKS_PER_DEGREE;
 // control parameters, and status. Since RobotC
 // is C and not C++, we will define separate functions
 // rather than encapsulate the desired behavior
-typedef struct {
+typedef struct
+{
 	tMotor mId;
 	tSensors sId;
+	bool enabled;
 	float commandDeg;
 	float encoderDeg;
 	float encoderRPM;
@@ -57,9 +59,11 @@ typedef struct {
 
 // Define operations for the motorControlType (similar to what we might have in C++ so the concepts will port
 // easily if ROBOTC ever grows up
-void constructMotorControl(motorControlType *this, tMotor mId, tSensors sId, float kp, float ki, float kd, float kb, float biasDeg) {
+void constructMotorControl(motorControlType *this, tMotor mId, tSensors sId, float kp, float ki, float kd, float kb, float biasDeg)
+{
 	this->mId = mId;
 	this->sId = sId;
+	this->enabled = true;
 	this->commandDeg = 0.0;
 	this->encoderDeg = 0.0;
 	this->encoderRPM = 0.0;
@@ -77,6 +81,17 @@ void constructMotorControl(motorControlType *this, tMotor mId, tSensors sId, flo
 // designs rather than allowing direct access to the elements
 // This allows us to modify behavior globally instead of needing
 // to find all uses
+
+void setEnable(motorControlType *this, bool flag)
+{
+	this->enabled = flag;
+}
+
+bool getEnable(motorControlType *this)
+{
+	return this->enabled;
+}
+
 
 // For every "set" there is a "get" function
 void setPosition(motorControlType *this, float positionDeg)

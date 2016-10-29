@@ -104,7 +104,6 @@ task driveSpeedControl()
 // The global variables define the control for the task
 // ***************************************************************
 const float WHEEL_TRACK_m  = 16.0 * IN_2_M;
-const float TRACK_RADIUS_m = WHEEL_TRACK_m / 2.0;
 const float WHEEL_DIAMETER_m = 4.0 * IN_2_M;
 const float TRACK_WHEEL_RATIO = WHEEL_TRACK_m / WHEEL_DIAMETER_m;
 const float WHEEL_RADIUS_M   = WHEEL_DIAMETER_m / 2.0;
@@ -182,14 +181,19 @@ float getRemainingAngle_deg(void)
 	// This keeps the code simple and robust to changes in
 	// the number of motors and encoders.
 	float remainingAngle_deg = 0.0;
+	int n = 0;
 	for (int i = 0; i < LENGTH(driveMotors); ++i)
 	{
-		// Accumulate the angle remaining
-		remainingAngle_deg += abs(getLastCommand(driveMotors[i]) - getPosition(driveMotors[i]));
+		// Accumulate the angle remaining on enabled motors
+	  if (getEnable(&driveMotors[i])
+	  {
+			remainingAngle_deg += abs(getLastCommand(&driveMotors[i]) - getPosition(&driveMotors[i]));
+			++n;
+		}
 	}
 
 	// Average the angle of all of the motors (we assume they are moving in the same direction)
-	remainingAngle_deg /= LENGTH(driveMotors);
+	remainingAngle_deg /= n;
 
 	// Convert the remaining wheel angle to distance
 	return remainingAngle_deg;
@@ -236,6 +240,7 @@ void move(float dist_m)
 		// Use the current encoder position associate with each motor
 	  // to command the correct offset
 	  float angle_deg = getPosition(&driveMotors[i]) + commandAngle_deg;
+	  setEnable(&driveMotors[i], true);
 		setPosition(&driveMotors[i], angle_deg);
 	}
 

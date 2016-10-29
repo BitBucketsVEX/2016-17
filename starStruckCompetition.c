@@ -123,6 +123,8 @@ bool autonomousComplete = false;
 
 task autonomous()
 {
+	autonomousComplete = false;
+
 	// Assume arm control and drive controls have been constructed
 
 	// Place the motor control loops at higher priority than the main loop
@@ -136,28 +138,29 @@ task autonomous()
 	// Need drive position control during autonomous mode
 	startTask(drivePositionControl, controlPriority);
 
+	const long WAIT_MSEC = 2000;
 	setArmPosition(60.0);
-	wait1Msec(1000);
+	wait1Msec(WAIT_MSEC);
 	move(0.3);
-	wait1Msec(1000);
+	wait1Msec(WAIT_MSEC);
 	move(-0.3);
-	wait1Msec(1000);
+	wait1Msec(WAIT_MSEC);
 	move(0.3);
-	wait1Msec(1000);
+	wait1Msec(WAIT_MSEC);
 	move(-0.3);
-	wait1Msec(1000);
+	wait1Msec(WAIT_MSEC);
 	turn(45.0);
-	wait1Msec(1000);
+	wait1Msec(WAIT_MSEC);
 	turn(-90.0);
-	wait1Msec(1000);
+	wait1Msec(WAIT_MSEC);
 	turn(45.0);
-	wait1Msec(1000);
+	wait1Msec(WAIT_MSEC);
 	turn(-90.0);
-	wait1Msec(1000);
+	wait1Msec(WAIT_MSEC);
 	turn(180.0);
-	wait1Msec(1000);
+	wait1Msec(WAIT_MSEC);
 	turn(-90.0);
-	wait1Msec(1000);
+	wait1Msec(WAIT_MSEC);
 	setArmPosition(0.0);
 
 	autonomousComplete = true;
@@ -177,12 +180,11 @@ TVexJoysticks turnControl = Ch4;
 
 task usercontrol()
 {
-	startTask(autonomous);
-	while (! autonomousComplete)
-	{
-		EndTimeSlice();
-	}
-	stopTask(drivePositionControl);
+	// If (for some reason during testing and such) the autonomous task and subtasks
+  // are still running we will need to stop them before continuing
+  stopTask(armControl);
+  stopTask(drivePositionControl);
+  stopTask(autonomous);
 
 	// Assume arm controls and drive controls have been constructed
 
@@ -197,6 +199,26 @@ task usercontrol()
 
 	for EVER
 	{
+		//
+		if ((vexRT[Btn7U] == 1) &&
+				(vexRT[Btn7D] == 1) &&
+				(vexRT[Btn7L] == 1) &&
+				(vexRT[Btn7R] == 1))
+		{
+			stopTask(driveSpeedControl);
+
+			startTask(autonomous);
+			EndTimeSlice();
+			while (! autonomousComplete)
+			{
+				EndTimeSlice();
+			}
+			stopTask(drivePositionControl);
+			stopTask(autonomous);
+
+			startTask(driveSpeedControl);
+		}
+
 		// Create toggle to switch front and back
 	  if (vexRT[Btn8D] == 1)
 	  {
@@ -265,7 +287,8 @@ task main() {
 
 	startTask(usercontrol);
 
-	for EVER {
+	for EVER
+	{
 		wait10Msec(100);
 	}
 
