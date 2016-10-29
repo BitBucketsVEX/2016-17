@@ -55,7 +55,7 @@ int deadband(int vel)
 // control functions independently of the input commands from drive speed
 // and turn coefficient
 int const DRIVE_SPEED_CONTROL_PERIOD_MSEC = 20;  // number of milliseconds per each control loop
-int const MAX_STEER = 50; // percent of drive to apply to steering
+float MAX_STEER = 50; // percent of drive to apply to steering
 
 int driveSpeed = 0; //The forward drive speed.
 int turnCoef = 0; //The turning amount.
@@ -69,6 +69,7 @@ task driveSpeedControl()
 	for EVER
 	{
 		// Linearizing will also limit the output
+		MAX_STEER = 100 - abs(driveSpeed) / (0.02 * MAX_MOTOR_COMMAND);
 		const int STEER = (MAX_STEER * turnCoef / 100);
 
 		// Minimize latency while hogging CPU
