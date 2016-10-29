@@ -28,7 +28,7 @@ int linearize(int vel)
 	int pwm;
 
 	if (vel > MAX_MOTOR_COMMAND)
-  {
+	{
 		vel = MAX_MOTOR_COMMAND;
 	}
 	if (vel < -MAX_MOTOR_COMMAND)
@@ -61,7 +61,7 @@ int driveSpeed = 0; //The forward drive speed.
 int turnCoef = 0; //The turning amount.
 
 #ifdef TEST_SIM
-	unsigned int driveCount = 0;
+unsigned int driveCount = 0;
 #endif
 
 task driveSpeedControl()
@@ -69,22 +69,22 @@ task driveSpeedControl()
 	for EVER
 	{
 		// Linearizing will also limit the output
-	  const int STEER = (MAX_STEER * turnCoef / 100);
+		const int STEER = (MAX_STEER * turnCoef / 100);
 
-	  // Minimize latency while hogging CPU
-	  hogCPU();
-	  motor[backLeft] = motor[frontLeft] = linearize(driveSpeed + STEER);
-	  motor[backRight] = motor[frontRight] = linearize(driveSpeed - STEER);
+		// Minimize latency while hogging CPU
+		hogCPU();
+		motor[backLeft] = motor[frontLeft] = linearize(driveSpeed + STEER);
+		motor[backRight] = motor[frontRight] = linearize(driveSpeed - STEER);
 
-	  // Hogging CPU here ensures that all 4 motors receive
-	  // commands "atomically"
+		// Hogging CPU here ensures that all 4 motors receive
+		// commands "atomically"
 
 		releaseCPU();
 
-		#ifdef TEST_SIM
-    // only display in emulator
-			displayLCDNumber(0, 8, (driveCount++)%100, 3);
-		#endif
+#ifdef TEST_SIM
+		// only display in emulator
+		displayLCDNumber(0, 8, (driveCount++)%100, 3);
+#endif
 
 		wait1Msec(DRIVE_SPEED_CONTROL_PERIOD_MSEC);
 	}
@@ -103,10 +103,11 @@ task driveSpeedControl()
 //
 // The global variables define the control for the task
 // ***************************************************************
-const float WHEEL_TRACK_m  = 15.25 * IN_2_M;
+const float WHEEL_TRACK_m  = 16.0 * IN_2_M;
 const float TRACK_RADIUS_m = WHEEL_TRACK_m / 2.0;
 const float WHEEL_DIAMETER_m = 4.0 * IN_2_M;
 const float WHEEL_RADIUS_M   = WHEEL_DIAMETER_m / 2.0;
+const float WHEEL_TRACK_RATIO = WHEEL_TRACK_m / WHEEL_DIAMETER_m;
 
 // A set of the motors we want to position control during the drivePositionControl task
 struct motorControlType driveMotors[4];
@@ -124,8 +125,8 @@ bool updated = true;
 
 float RobotX_m = 0.0;									// x is +right 				(0 , 0) is the original robot position
 float RobotY_m = 0.0;									// y is +toward goal
-float RobotOrientation_rad = PI/2.0;	// 0 angle is along x-axis
-float RobotHeading_deg = (RobotOrientation_rad - PI/2.0) * RAD_2_DEG;					// 0 is toward the goal... keep in degrees for debuging
+float RobotOrientation_rad = PI / 2.0;	// 0 angle is along x-axis
+float RobotHeading_deg = (RobotOrientation_rad - PI / 2.0) * RAD_2_DEG;					// 0 is toward the goal... keep in degrees for debuging
 
 // Unlike arm control, the left/right is important here
 // Provide index to our structure to make mapping easier
@@ -201,7 +202,7 @@ bool isDriveStopped(void)
 	for (int i = 0; i < LENGTH(driveMotors); ++i)
 	{
 		// Consider a drive motor stopped when within 1 degree
-	  // Accumulate the status; if any one motor has not stopped we return false
+		// Accumulate the status; if any one motor has not stopped we return false
 		isStopped &= (abs(getLastCommand(driveMotors[i]) - getPosition(driveMotors[i])) > 1);
 	}
 
@@ -212,11 +213,11 @@ bool isDriveStopped(void)
 void move(float dist_m)
 {
 	// Required wheel angle is distance / radius
-  float commandAngle_deg = RAD_2_DEG * (dist_m / WHEEL_RADIUS_M);
+	float commandAngle_deg = RAD_2_DEG * (dist_m / WHEEL_RADIUS_M);
 
 	// Hog the CPU while setting all the positions
-  // to ensure they change atomically even for the high priority
-  // task
+	// to ensure they change atomically even for the high priority
+	// task
 	hogCPU();
 	updated = false;
 	moving = true;
@@ -225,8 +226,8 @@ void move(float dist_m)
 	for (int i = 0; i < LENGTH(driveMotors); ++i)
 	{
 		// Use the current encoder position associate with each motor
-	  // to command the correct offset
-	  float angle_deg = getPosition(&driveMotors[i]) + commandAngle_deg;
+		// to command the correct offset
+		float angle_deg = getPosition(&driveMotors[i]) + commandAngle_deg;
 		setPosition(&driveMotors[i], angle_deg);
 	}
 
@@ -249,14 +250,15 @@ void move(float dist_m)
 	// good idea where we were at the moment we stopped... not perfect
 	// but pretty good
 	float distanceTraveled_m = 0.0;
-  while ( ! isDriveStopped())
-  {
-  	// Get the remaining distance to compute how far we moved so far
-    // Keep doing this
-  	distanceTraveled_m = dist_m - getRemainingDistance_m();
+	while ( ! isDriveStopped())
+	{
+		// Get the remaining distance to compute how far we moved so far
+		// Keep doing this
+		distanceTraveled_m = dist_m - getRemainingDistance_m();
 
-  	EndTimeSlice();
-  }
+		EndTimeSlice();
+	}
+
 
 
 	// When the motion is complete we can update the location
@@ -264,44 +266,54 @@ void move(float dist_m)
 	// NOTE: This will be approximate since the position encoding and the
 	// motor shutdown are not precise, but much more precise than a time-based
 	// solution.
-  //
-  // We will assume that the heading error caused by the asymmetric encoding
-  // is negligible at the moment (i.e., we used a average via the getRemainingDistance_m
-  // function, above)
-  //
+	//
+	// We will assume that the heading error caused by the asymmetric encoding
+	// is negligible at the moment (i.e., we used a average via the getRemainingDistance_m
+	// function, above)
+	//
 	// To improve accuracy later we would use other sensors to measure location
 	// and correct our internal variables.
-  moving = false;
+	moving = false;
 
 	// Compute the vector that we will move
-  float x_m = distanceTraveled_m * cos(RobotOrientation_rad);
-  float y_m = distanceTraveled_m * sin(RobotOrientation_rad);
+	float x_m = distanceTraveled_m * cos(RobotOrientation_rad);
+	float y_m = distanceTraveled_m * sin(RobotOrientation_rad);
 
-  hogCPU();
+	hogCPU();
 
-  RobotX_m += x_m;
-  RobotY_m += y_m;
+	RobotX_m += x_m;
+	RobotY_m += y_m;
 
-  updated = true;
+	updated = true;
 
-  releaseCPU();
+	releaseCPU();
 }
 
 // turn - relative angle (degrees) from current direction
-void turn(float angle_deg)
-{
-	/// TODO: The logic is similar to the above move() code
+void turn(float delta_angle_deg) {
+	float delta_wheel_deg = WHEEL_TRACK_RATIO * delta_angle_deg;
 
+
+	hogCPU();
+	float angle_deg = getPosition(&driveMotors[DMI_FRONT_RIGHT]) + delta_wheel_deg;
+	setPosition(&driveMotors[DMI_FRONT_RIGHT], angle_deg);
+	setPosition(&driveMotors[DMI_BACK_RIGHT], angle_deg);
+
+	angle_deg = getPosition(&driveMotors[DMI_FRONT_LEFT]) - delta_wheel_deg;
+	setPosition(&driveMotors[DMI_FRONT_LEFT], angle_deg);
+	setPosition(&driveMotors[DMI_BACK_LEFT], angle_deg);
+	releaseCPU();
+
+
+	while (!isDriveStopped()) {
+		EndTimeSlice();
+	}
 }
 
 // Turn to a specific heading (0 is toward goal)
-void turnTo(float deg)
-{
-	// Compute angle difference between current heading
-  // and desired heading
-
-	// Turn the specified amount
-
+void turnTo(float deg) {
+	float delta_angle = deg - RobotOrientation_rad;
+	turn(delta_angle);
 }
 
 void moveTo(float x, float y)
@@ -325,8 +337,8 @@ const long DRIVE_POSITION_CONTROL_PERIOD_MSEC = 20;
 task drivePositionControl()
 {
 	// TODO: Insert code similar to drive control but this time
-  // we will keep track of (x,y) and heading, stopping only
-  // when both are achieved
+	// we will keep track of (x,y) and heading, stopping only
+	// when both are achieved
 	if ( ! drivePositionControlInitialized)
 	{
 		resetDrivePosition();
@@ -338,12 +350,12 @@ task drivePositionControl()
 		maintainDrivePosition();
 
 #ifdef TEST_SIM
-    // only display in emulator
+		// only display in emulator
 		displayLCDNumber(1, 2, (driveCount++)%100, 3);
 #endif
 
 		wait1Msec(DRIVE_POSITION_CONTROL_PERIOD_MSEC);	// Let lower priority tasks execute before resuming control
-   }
+	}
 }
 
 #endif
