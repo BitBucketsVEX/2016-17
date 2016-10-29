@@ -136,13 +136,29 @@ task autonomous()
 	// Need drive position control during autonomous mode
 	startTask(drivePositionControl, controlPriority);
 
-	move(0.1);
-	wait1Msec(1000);
-	move(-0.1);
+	setArmPosition(60.0);
 	wait1Msec(1000);
 	move(0.3);
 	wait1Msec(1000);
 	move(-0.3);
+	wait1Msec(1000);
+	move(0.3);
+	wait1Msec(1000);
+	move(-0.3);
+	wait1Msec(1000);
+	turn(45.0);
+	wait1Msec(1000);
+	turn(-90.0);
+	wait1Msec(1000);
+	turn(45.0);
+	wait1Msec(1000);
+	turn(-90.0);
+	wait1Msec(1000);
+	turn(180.0);
+	wait1Msec(1000);
+	turn(-90.0);
+	wait1Msec(1000);
+	setArmPosition(0.0);
 
 	autonomousComplete = true;
 }
@@ -156,18 +172,17 @@ task autonomous()
 //                                                                                             //
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
-bool armUp = false;
-bool partialArmUp = false;
 int frontback = 1;
 TVexJoysticks turnControl = Ch4;
 
 task usercontrol()
 {
-	//startTask(autonomous);
-	//while (! autonomousComplete)
-	//{
-	//	EndTimeSlice();
-	//}
+	startTask(autonomous);
+	while (! autonomousComplete)
+	{
+		EndTimeSlice();
+	}
+	stopTask(drivePositionControl);
 
 	// Assume arm controls and drive controls have been constructed
 

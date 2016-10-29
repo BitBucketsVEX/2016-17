@@ -103,9 +103,10 @@ task driveSpeedControl()
 //
 // The global variables define the control for the task
 // ***************************************************************
-const float WHEEL_TRACK_m  = 15.25 * IN_2_M;
+const float WHEEL_TRACK_m  = 16.0 * IN_2_M;
 const float TRACK_RADIUS_m = WHEEL_TRACK_m / 2.0;
 const float WHEEL_DIAMETER_m = 4.0 * IN_2_M;
+const float TRACK_WHEEL_RATIO = WHEEL_TRACK_m / WHEEL_DIAMETER_m;
 const float WHEEL_RADIUS_M   = WHEEL_DIAMETER_m / 2.0;
 
 // A set of the motors we want to position control during the drivePositionControl task
@@ -113,7 +114,7 @@ struct motorControlType driveMotors[4];
 
 // Functions to create and control drive motors as single call
 bool driveMotorsConstructed = false;
-float driveKp = 0.5;
+float driveKp = 0.2;
 float driveKi = 0.0;
 float driveKd = 0.0;
 float driveKb = 0.0;
@@ -172,9 +173,9 @@ void maintainDrivePosition(void)
 	}
 }
 
-// getRemainingDistance_m - returns the remaining distance to go
+// getRemainingAngle_deg - returns the remaining angle to go
 // based on the command and position of each motor
-float getRemainingDistance_m(void)
+float getRemainingAngle_deg(void)
 {
 	// Average the distance to go based for all of the motors
 	// even if the same encoder is used for multiple motors
@@ -191,7 +192,15 @@ float getRemainingDistance_m(void)
 	remainingAngle_deg /= LENGTH(driveMotors);
 
 	// Convert the remaining wheel angle to distance
-	return (remainingAngle_deg * DEG_2_RAD) * WHEEL_RADIUS_M;
+	return remainingAngle_deg;
+}
+
+// getRemainingDistance_m - returns the remaining distance to go
+// based on the command and position of each motor
+float getRemainingDistance_m(void)
+{
+	// Convert the remaining wheel angle to distance
+	return (getRemainingAngle_deg() * DEG_2_RAD) * WHEEL_RADIUS_M;
 }
 
 // Polling function to test for all motors reaching their desired position
@@ -255,6 +264,10 @@ void move(float dist_m)
     // Keep doing this
   	distanceTraveled_m = dist_m - getRemainingDistance_m();
 
+  	// TODO: We can add an abort here if we want
+  	// Just need to stop motors at current angle
+  	// and then recompute the distance traveled and break
+
   	EndTimeSlice();
   }
 
@@ -273,7 +286,7 @@ void move(float dist_m)
 	// and correct our internal variables.
   moving = false;
 
-	// Compute the vector that we will move
+	// Compute the vector that we moved
   float x_m = distanceTraveled_m * cos(RobotOrientation_rad);
   float y_m = distanceTraveled_m * sin(RobotOrientation_rad);
 
@@ -290,8 +303,79 @@ void move(float dist_m)
 // turn - relative angle (degrees) from current direction
 void turn(float angle_deg)
 {
-	/// TODO: The logic is similar to the above move() code
+	float commandAngle_deg = angle_deg * TRACK_WHEEL_RATIO;
 
+	// Hog the CPU while setting all the positions
+  // to ensure they change atomically even for the high priority
+  // task
+	hogCPU();
+
+	updated = false;
+	moving = true;
+
+	// When turning we set right motors positive and left motor negative
+	float finalAngle_deg = getPosition(&driveMotors[DMI_FRONT_RIGHT]) + commandAngle_deg;
+	setPosition(&driveMotors[DMI_FRONT_RIGHT], finalAngle_deg);
+
+	finalAngle_deg = getPosition(&driveMotors[DMI_BACK_RIGHT]) + commandAngle_deg;
+	setPosition(&driveMotors[DMI_BACK_RIGHT], finalAngle_deg);
+
+	finalAngle_deg = getPosition(&driveMotors[DMI_FRONT_LEFT]) - commandAngle_deg;
+	setPosition(&driveMotors[DMI_FRONT_LEFT], finalAngle_deg);
+
+	finalAngle_deg = getPosition(&driveMotors[DMI_BACK_LEFT]) - commandAngle_deg;
+	setPosition(&driveMotors[DMI_BACK_LEFT], finalAngle_deg);
+
+	releaseCPU();
+
+	// Wait for angle to be reached
+	// Two options
+	//	1) Busy-wait by sleeping/polling
+	//  2) Use a mutex or other notification
+	//
+	// For simplicity we will simply busy-wait for all of the motors to
+	// reach their respective commands (to within a tolerance)
+	// This wait is indefinitie, for now no timeout (could add later)
+	// The point is that we will give up our timeslice as efficiently
+	// as possible since we are not doing anything useful.
+	//
+	// There is one advantage to the polling; it allows us to monitor
+	// the progress and use it to keep track of the vector, so far.
+	// If we were to be disabled (task stops) we would have a pretty
+	// good idea where we were at the moment we stopped... not perfect
+	// but pretty good
+	float angleTraveled_deg = 0.0;
+  while ( ! isDriveStopped())
+  {
+  	// Get the remaining distance to compute how far we moved so far
+    // Keep doing this
+  	angleTraveled_deg = angle_deg - getRemainingAngle_deg();
+
+  	// TODO: We can add an abort here if we want
+  	// Just need to stop motors at current angle
+  	// and then recompute the distance traveled and break
+
+  	EndTimeSlice();
+  }
+
+	// When the motion is complete we can update the heading
+  //
+  // We will assume that the heading error caused by the asymmetric encoding
+  // is negligible at the moment (i.e., we used a average via the getRemainingAngle_deg
+  // function, above)
+  //
+	// To improve accuracy later we would use other sensors to measure location
+	// and correct our internal variables.
+
+  moving = false;
+
+  hogCPU();
+
+  RobotHeading_deg += angleTraveled_deg;
+
+  updated = true;
+
+  releaseCPU();
 }
 
 // Turn to a specific heading (0 is toward goal)
