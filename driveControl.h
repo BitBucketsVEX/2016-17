@@ -108,7 +108,6 @@ const float WHEEL_TRACK_m  = 16.0 * IN_2_M;
 const float WHEEL_DIAMETER_m = 4.0 * IN_2_M;
 const float TRACK_WHEEL_RATIO = WHEEL_TRACK_m / WHEEL_DIAMETER_m;
 const float WHEEL_RADIUS_M   = WHEEL_DIAMETER_m / 2.0;
-const float WHEEL_TRACK_RATIO = WHEEL_TRACK_m / WHEEL_DIAMETER_m;
 
 // A set of the motors we want to position control during the drivePositionControl task
 struct motorControlType driveMotors[4];
@@ -187,7 +186,7 @@ float getRemainingAngle_deg(void)
   for (int i = 0; i < LENGTH(driveMotors); ++i)
   {
     // Accumulate the angle remaining on enabled motors
-    if (getEnable(&driveMotors[i])
+    if (getEnable(&driveMotors[i]))
     {
       remainingAngle_deg += abs(getLastCommand(&driveMotors[i]) - getPosition(&driveMotors[i]));
       ++n;
@@ -394,7 +393,7 @@ void turnTo(float heading_deg)
   // Sticking to a right hand rule
   // negative (-) is right
   // positive (+) is left
-  float angle_deg = heading_deg - RobotHeading_rad;
+  float angle_deg = heading_deg - RobotHeading_deg;
   turn(angle_deg);
 }
 

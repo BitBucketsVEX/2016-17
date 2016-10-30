@@ -199,7 +199,7 @@ task usercontrol()
 
 	for EVER
 	{
-		//
+		// Special button combination to trigger autonomous test
 		if ((vexRT[Btn7U] == 1) &&
 				(vexRT[Btn7D] == 1) &&
 				(vexRT[Btn7L] == 1) &&
@@ -245,24 +245,26 @@ task usercontrol()
 		driveSpeed = frontback * deadband(vexRT[Ch3]);
 		turnCoef   = deadband(vexRT[turnControl]);
 
-		// Use up/down buttons for all the way up or down
-		if (vexRT[Btn5U] == 1)
-		{
-			setArmPosition(120.0);
-		}
-		else if (vexRT[Btn5D] == 1)
+		// Use up/down buttons for various arm commands
+		// TODO: Need to use better semantics
+		// TODO: Semantics should be in terms of horizon or vertical
+		// TODO: 0.0 degrees should be horizontal hold with +up and -down
+		// TODO: A command for bottom and top would be useful
+		if (vexRT[Btn5D] == 1)
 		{
 			setArmPosition(0.0);
 		}
-
-		// Use up/down buttons for 1/2 way up or all the way down
-		if (vexRT[Btn6U] == 1)
+		else if (vexRT[Btn5U] == 1)
+		{
+			setArmPosition(120.0);
+		}
+		else if (vexRT[Btn6U] == 1)
 		{
 			setArmPosition(60.0);
 		}
 		else if (vexRT[Btn6D] == 1)
 		{
-			setArmPosition(0.0);
+			setArmPosition(30.0);
 		}
 
 		EndTimeSlice();
