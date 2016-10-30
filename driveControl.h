@@ -386,26 +386,16 @@ void turn(float angle_deg)
   releaseCPU();
 }
 
-  hogCPU();
-  float angle_deg = getPosition(&driveMotors[DMI_FRONT_RIGHT]) + delta_wheel_deg;
-  setPosition(&driveMotors[DMI_FRONT_RIGHT], angle_deg);
-  setPosition(&driveMotors[DMI_BACK_RIGHT], angle_deg);
-
-  angle_deg = getPosition(&driveMotors[DMI_FRONT_LEFT]) - delta_wheel_deg;
-  setPosition(&driveMotors[DMI_FRONT_LEFT], angle_deg);
-  setPosition(&driveMotors[DMI_BACK_LEFT], angle_deg);
-  releaseCPU();
-
-
-  while (!isDriveStopped()) {
-    EndTimeSlice();
-  }
-}
 
 // Turn to a specific heading (0 is toward goal)
-void turnTo(float deg) {
-  float delta_angle = deg - RobotOrientation_rad;
-  turn(delta_angle);
+void turnTo(float heading_deg)
+{
+	// 0 is toward goal
+  // Sticking to a right hand rule
+  // negative (-) is right
+  // positive (+) is left
+  float angle_deg = heading_deg - RobotHeading_rad;
+  turn(angle_deg);
 }
 
 void moveTo(float x, float y)
