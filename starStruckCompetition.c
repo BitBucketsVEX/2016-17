@@ -244,17 +244,28 @@ task usercontrol()
 		driveSpeed = frontback * deadband(vexRT[DRIVE_CONTROL]);
 		turnCoef   = deadband(vexRT[TURN_CONTROL]);
 
+		// Read joystick for hand control
+		// NOTE: Later we will add an "orientation stabilized"
+		// or "arm tracking" mode where the hand angle relative
+		// to the floor is held constant based on the arm angle
+
 		float handAngle_deg = getHandPosition();
 		float handAngleRate = deadband(vexRT[HAND_CONTROL]);
+
+		// Limit the hand angle rate
+		// Actual rate depends on task loop timing
+		// Can add kinematic calculation later
 		if (handAngleRate > 0)
 		{
-			handAngle_deg -= 0.1;
+			handAngle_deg -= 0.01;
 		}
 		else if (handAngleRate < 0)
 		{
-			handAngle_deg += 0.1;
+			handAngle_deg += 0.01;
 		}
 
+		// Limit hand angle
+		// For now the hand starts at 0 (curled to arm) and -90 is extended toward floor (or back of robot)
 		if (handAngle_deg > 0.0)
 		{
 			handAngle_deg = 0.0;

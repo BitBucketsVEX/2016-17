@@ -120,21 +120,31 @@ void resetPosition(motorControlType *this)
 void maintainPosition(motorControlType *this)
 {
 	long encoder_tick = SensorValue[this->sId];		// Using shaft encoders for the moment
-	this->encoderRPM  = 0.0;	  // TODO: No derivative control at this time
 
-
+	// Compute error between what we want and what we have
 	this->encoderDeg = encoder_tick * DEGREES_PER_TICK;
 	float error = this->commandDeg - this->encoderDeg;
 
+	// No error accumulation at this time
+
+	// No error rate at this time
+	this->encoderRPM  = 0.0;	  // TODO: No derivative control at this time
+
+	// Compute compensation bias
 	float bias = this->kb * cos((this->encoderDeg - this->biasDeg) * PI / 180);
 
 	if (fabs(error) > 0)
 	{
 		// make the speed proportional to the error
-	  //int lastPidSign = (this->pid != 0)? this->pid / abs(this->pid) : 1;
 	  this->pid = (int) (this->kp * error);
+
+	  // Add bias compensation (e.g., a gravity compensator when commanding 0 will not hold)
 	  this->pid += (int) bias;
-	  // this->pid += lastPidSign* (int) (this->kd * this->encoder_rpm); // truncate to integer
+
+	  // Add in integral and derivitive control later if students really need it.
+	  // NOTE: with sensors that read position directly this is almost never needed
+	  // and students tend to defocus from the real problems.
+
 	  if (this->pid > MAX_MOTOR_COMMAND)
 	  {
 	  	this->pid = MAX_MOTOR_COMMAND;
