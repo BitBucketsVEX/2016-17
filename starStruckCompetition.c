@@ -1,10 +1,11 @@
 #pragma config(Sensor, dgtl1,  armEncoder,     sensorQuadEncoder)
 #pragma config(Sensor, dgtl3,  leftEncoder,    sensorQuadEncoder)
 #pragma config(Sensor, dgtl5,  rightEncoder,   sensorQuadEncoder)
+#pragma config(Sensor, dgtl7,  handEncoder,    sensorQuadEncoder)
 #pragma config(Motor,  port2,           frontRight,    tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port3,           frontLeft,     tmotorVex393_MC29, openLoop, reversed)
-#pragma config(Motor,  port4,           backRight,     tmotorVex393_MC29, openLoop)
-#pragma config(Motor,  port5,           backLeft,      tmotorVex393_MC29, openLoop)
+#pragma config(Motor,  port4,           handRight,     tmotorVex393_MC29, openLoop)
+#pragma config(Motor,  port5,           handLeft,      tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port6,           topLeft,       tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port7,           topRight,      tmotorVex393_MC29, openLoop, reversed)
 #pragma config(Motor,  port8,           bottomLeft,    tmotorVex393_MC29, openLoop)
@@ -90,6 +91,7 @@
 #include "convenientMacros.h"
 #include "motorControlTypes.h"
 #include "armControl.h"
+#include "handControl.h"
 #include "driveControl.h"
 
 
@@ -107,6 +109,7 @@ void pre_auton()
 	bStopTasksBetweenModes = true;
 
 	constructArmMotorControls();
+	constructHandMotorControls();
 	constructDriveMotorControls();
 }
 
@@ -134,6 +137,7 @@ task autonomous()
 
 	// Need arm control during autonomous mode
 	startTask(armControl, controlPriority);
+	startTask(handControl, controlPriority);
 
 	// Need drive position control during autonomous mode
 	startTask(drivePositionControl, controlPriority);
@@ -176,13 +180,17 @@ task autonomous()
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 int frontback = 1;
-TVexJoysticks turnControl = Ch4;
+const TVexJoysticks HAND_CONTROL = Ch2;
+const TVexJoysticks DRIVE_CONTROL = Ch3;
+const TVexJoysticks TURN_CONTROL = Ch4;
+
 
 task usercontrol()
 {
 	// If (for some reason during testing and such) the autonomous task and subtasks
   // are still running we will need to stop them before continuing
   stopTask(armControl);
+  stopTask(handControl);
   stopTask(drivePositionControl);
   stopTask(autonomous);
 
@@ -191,8 +199,9 @@ task usercontrol()
 	// Place the motor control loop at higher priority than the main loop
 	// so we can ensure more stable application of time. The motor control
 	// loop must sleep long enough for other tasks to get execution time
-	short armControlPriority = getTaskPriority(usercontrol) + 1;
-	startTask(armControl, armControlPriority);
+	short controlPriority = getTaskPriority(usercontrol) + 1;
+	startTask(armControl, controlPriority);
+	startTask(handControl, controlPriority);
 
 	// Only need drive speed control in user control mode
 	startTask(driveSpeedControl);
@@ -229,21 +238,33 @@ task usercontrol()
 	  	frontback = 1;
 	  }
 
-	  // Create toggle to switch joystick right/left
-	  if (vexRT[Btn8R] == 1)
-	  {
-	  	turnControl = Ch1;
-	  }
-	  else if (vexRT[Btn8L] == 1)
-	  {
-	  	turnControl = Ch4;
-	  }
-
 		// Read the joysticks for drive control
 	  // passing the latest command for the drive speed task
 	  // to pick up on next cycle
-		driveSpeed = frontback * deadband(vexRT[Ch3]);
-		turnCoef   = deadband(vexRT[turnControl]);
+		driveSpeed = frontback * deadband(vexRT[DRIVE_CONTROL]);
+		turnCoef   = deadband(vexRT[TURN_CONTROL]);
+
+		float handAngle_deg = getHandPosition();
+		float handAngleRate = deadband(vexRT[HAND_CONTROL]);
+		if (handAngleRate > 0)
+		{
+			handAngle_deg -= 0.1;
+		}
+		else if (handAngleRate < 0)
+		{
+			handAngle_deg += 0.1;
+		}
+
+		if (handAngle_deg > 0.0)
+		{
+			handAngle_deg = 0.0;
+		}
+		else if (handAngle_deg < -90.0)
+		{
+			handAngle_deg = -90.0;
+		}
+
+		setHandPosition(handAngle_deg);
 
 		// Use up/down buttons for various arm commands
 		// TODO: Need to use better semantics

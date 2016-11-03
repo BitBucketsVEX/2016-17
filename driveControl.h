@@ -6,6 +6,7 @@
 #define DRIVE_CONTROL_H
 
 #include "convenientMacros.h"
+#include "motorControlTypes.h"
 
 // -----------------------------------------------------------------------------
 // Drive Control
@@ -55,7 +56,6 @@ int deadband(int vel)
 // control functions independently of the input commands from drive speed
 // and turn coefficient
 int const DRIVE_SPEED_CONTROL_PERIOD_MSEC = 20;  // number of milliseconds per each control loop
-float MAX_STEER = 50; // percent of drive to apply to steering
 
 int driveSpeed = 0; //The forward drive speed.
 int turnCoef = 0; //The turning amount.
@@ -68,18 +68,29 @@ task driveSpeedControl()
 {
   for EVER
   {
+  	// Steering coefficient varies from 50% to 100% of output depending
+    // on the drive speed; if we are driving forward/backward faster
+    // then less steering is applied. If we are not moving forward/backward,
+  	// we want all power applied to the turn.
     // Linearizing will also limit the output
-    MAX_STEER = 100 - abs(driveSpeed) / (0.02 * MAX_MOTOR_COMMAND);
+    const float MAX_STEER = 100 - abs(driveSpeed) / (0.02 * MAX_MOTOR_COMMAND);
     const int STEER = (MAX_STEER * turnCoef / 100);
 
     // Minimize latency while hogging CPU
-    hogCPU();
-    motor[backLeft] = motor[frontLeft] = linearize(driveSpeed + STEER);
-    motor[backRight] = motor[frontRight] = linearize(driveSpeed - STEER);
-
     // Hogging CPU here ensures that all 4 motors receive
-    // commands "atomically"
-
+    // commands "atomically" when we are not using slaving
+    // configurations.
+    // To minimize how long we are hogging the CPU we want
+    // the linearize function calls to be done before we send
+    // commands to the motors.
+    const int LEFT_SIDE = linearize(driveSpeed + STEER);
+    const int RIGHT_SIDE = linearize(driveSpeed - STEER);
+    hogCPU();
+    // The order of execution also ensures that the motors
+    // on opposite sides start up as close to each other
+    // as possible, keeping the robot straight as possible
+    motor[frontLeft] = LEFT_SIDE;
+    motor[frontRight] = RIGHT_SIDE;
     releaseCPU();
 
 #ifdef TEST_SIM
@@ -133,9 +144,7 @@ float RobotHeading_deg = (RobotOrientation_rad - PI / 2.0) * RAD_2_DEG;         
 enum DriveMotorIds
 {
   DMI_FRONT_RIGHT,
-  DMI_FRONT_LEFT,
-  DMI_BACK_RIGHT,
-  DMI_BACK_LEFT
+  DMI_FRONT_LEFT
 };
 
 // This constructor function initializes the struct array
@@ -147,8 +156,6 @@ void constructDriveMotorControls(void)
   {
     constructMotorControl(&driveMotors[DMI_FRONT_RIGHT], frontRight, rightEncoder, driveKp, driveKi, driveKd, driveKb, 0.0);
     constructMotorControl(&driveMotors[DMI_FRONT_LEFT],  frontLeft,  leftEncoder,  driveKp, driveKi, driveKd, driveKb, 0.0);
-    constructMotorControl(&driveMotors[DMI_BACK_RIGHT],  backRight,  rightEncoder, driveKp, driveKi, driveKd, driveKb, 0.0);
-    constructMotorControl(&driveMotors[DMI_BACK_LEFT],   backLeft,   leftEncoder,  driveKp, driveKi, driveKd, driveKb, 0.0);
 
     driveMotorsConstructed = true;
   }
@@ -324,14 +331,8 @@ void turn(float angle_deg)
   float finalAngle_deg = getPosition(&driveMotors[DMI_FRONT_RIGHT]) + commandAngle_deg;
   setPosition(&driveMotors[DMI_FRONT_RIGHT], finalAngle_deg);
 
-  finalAngle_deg = getPosition(&driveMotors[DMI_BACK_RIGHT]) + commandAngle_deg;
-  setPosition(&driveMotors[DMI_BACK_RIGHT], finalAngle_deg);
-
   finalAngle_deg = getPosition(&driveMotors[DMI_FRONT_LEFT]) - commandAngle_deg;
   setPosition(&driveMotors[DMI_FRONT_LEFT], finalAngle_deg);
-
-  finalAngle_deg = getPosition(&driveMotors[DMI_BACK_LEFT]) - commandAngle_deg;
-  setPosition(&driveMotors[DMI_BACK_LEFT], finalAngle_deg);
 
   releaseCPU();
 

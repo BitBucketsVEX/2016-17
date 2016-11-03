@@ -4,6 +4,7 @@
 #define ARM_CONTROL_H
 
 #include "convenientMacros.h"
+#include "motorControlTypes.h"
 
 // -------------------------------------------------------------------------
 // Arm Control
