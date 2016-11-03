@@ -128,7 +128,7 @@ void maintainPosition(motorControlType *this)
 
 	float bias = this->kb * cos((this->encoderDeg - this->biasDeg) * PI / 180);
 
-	if (abs(error) > 0)
+	if (fabs(error) > 0)
 	{
 		// make the speed proportional to the error
 	  //int lastPidSign = (this->pid != 0)? this->pid / abs(this->pid) : 1;
