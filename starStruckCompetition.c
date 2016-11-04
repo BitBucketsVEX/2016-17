@@ -184,6 +184,7 @@ const TVexJoysticks HAND_CONTROL = Ch2;
 const TVexJoysticks DRIVE_CONTROL = Ch3;
 const TVexJoysticks TURN_CONTROL = Ch4;
 
+const int MAX_JOYSTICK_COMMAND = 127;
 
 task usercontrol()
 {
@@ -255,14 +256,8 @@ task usercontrol()
 		// Limit the hand angle rate
 		// Actual rate depends on task loop timing
 		// Can add kinematic calculation later
-		if (handAngleRate > 0)
-		{
-			handAngle_deg -= 0.01;
-		}
-		else if (handAngleRate < 0)
-		{
-			handAngle_deg += 0.01;
-		}
+		float handStep_deg = 0.25 * handAngleRate / MAX_JOYSTICK_COMMAND;
+		handAngle_deg -= handStep_deg;	// Forward joystick equal hand down
 
 		// Limit hand angle
 		// For now the hand starts at 0 (curled to arm) and -90 is extended toward floor (or back of robot)
