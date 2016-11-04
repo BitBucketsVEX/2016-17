@@ -186,6 +186,15 @@ const TVexJoysticks TURN_CONTROL = Ch4;
 
 const int MAX_JOYSTICK_COMMAND = 127;
 
+const TVexJoysticks ALL_DOWN = Btn7U;
+const TVexJoysticks HAND_UP  = Btn7R;
+const TVexJoysticks LIFT     = Btn7D;
+const TVexJoysticks DUMP     = Btn7L;
+
+bool holdHandRelative = false;		// When true, hand stays relative to ground regardless of arm position
+float armAngleStart_deg = 0.0;
+float handAngleStart_deg = 0.0;
+
 task usercontrol()
 {
 	// If (for some reason during testing and such) the autonomous task and subtasks
@@ -250,27 +259,27 @@ task usercontrol()
 		// or "arm tracking" mode where the hand angle relative
 		// to the floor is held constant based on the arm angle
 
-		float handAngle_deg = getHandPosition();
-		float handAngleRate = deadband(vexRT[HAND_CONTROL]);
+		//float handAngle_deg = getHandPosition();
+		//float handAngleRate = deadband(vexRT[HAND_CONTROL]);
 
 		// Limit the hand angle rate
 		// Actual rate depends on task loop timing
 		// Can add kinematic calculation later
-		float handStep_deg = 0.25 * handAngleRate / MAX_JOYSTICK_COMMAND;
-		handAngle_deg -= handStep_deg;	// Forward joystick equal hand down
+		//float handStep_deg = 0.25 * handAngleRate / MAX_JOYSTICK_COMMAND;
+		//handAngle_deg -= handStep_deg;	// Forward joystick equal hand down
 
-		// Limit hand angle
-		// For now the hand starts at 0 (curled to arm) and -90 is extended toward floor (or back of robot)
-		if (handAngle_deg > 0.0)
-		{
-			handAngle_deg = 0.0;
-		}
-		else if (handAngle_deg < -90.0)
-		{
-			handAngle_deg = -90.0;
-		}
+		//// Limit hand angle
+		//// For now the hand starts at 0 (curled to arm) and -90 is extended toward floor (or back of robot)
+		//if (handAngle_deg > 0.0)
+		//{
+		//	handAngle_deg = 0.0;
+		//}
+		//else if (handAngle_deg < -90.0)
+		//{
+		//	handAngle_deg = -90.0;
+		//}
 
-		setHandPosition(handAngle_deg);
+		//setHandPosition(handAngle_deg);
 
 		// Use up/down buttons for various arm commands
 		// TODO: Need to use better semantics
@@ -292,6 +301,40 @@ task usercontrol()
 		else if (vexRT[Btn6D] == 1)
 		{
 			setArmPosition(30.0);
+		}
+
+		// Preset commands
+		if (vexRT[ALL_DOWN])
+		{
+			holdHandRelative = false;
+			setArmPosition(0.0);
+			setHandPosition(-90.0);
+		}
+		else if (vexRT[HAND_UP])
+		{
+			holdHandRelative = false;
+			setHandPosition(0.0);
+		}
+		else if (vexRT[LIFT])
+		{
+			if (holdHandRelative == false)
+			{
+				holdHandRelative = true;
+				armAngleStart_deg = getArmPosition();
+				handAngleStart_deg = getHandPosition();
+				setArmPosition(130.0);
+			}
+		}
+		else if (vexRT[DUMP])
+		{
+			holdHandRelative = false;
+			setHandPosition(-30.0);
+		}
+
+		if (holdHandRelative)
+		{
+			float deltaArm_deg = getArmPosition() - armAngleStart_deg;
+			setHandPosition(handAngleStart_deg - deltaArm_deg);
 		}
 
 		EndTimeSlice();

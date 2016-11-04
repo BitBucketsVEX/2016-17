@@ -54,12 +54,15 @@ void setHandPosition(float angle_deg)
 	releaseCPU();
 }
 
-float getHandPosition(void)
+float getHandCommand(void)
 {
 	return getLastCommand(&handMotors[0]);
 }
 
-
+float getHandPosition(void)
+{
+	return getPosition(&handMotors[0]);
+}
 void maintainHandPosition(void)
 {
 	for (int i = 0; i < LENGTH(handMotors); ++i)
