@@ -4,6 +4,7 @@
 #define ARM_CONTROL_H
 
 #include "convenientMacros.h"
+#include "motorControlTypes.h"
 
 // -------------------------------------------------------------------------
 // Arm Control
@@ -53,6 +54,17 @@ void setArmPosition(float angle_deg)
 	}
 
 	releaseCPU();
+}
+
+float getArmCommand(void)
+{
+	// Return the position of any motor since we assume all are working together
+	return getLastCommand(&armMotors[0]);
+}
+
+float getArmPosition(void)
+{
+	return getPosition(&armMotors[0]);
 }
 
 

@@ -1,10 +1,11 @@
 #pragma config(Sensor, dgtl1,  armEncoder,     sensorQuadEncoder)
 #pragma config(Sensor, dgtl3,  leftEncoder,    sensorQuadEncoder)
 #pragma config(Sensor, dgtl5,  rightEncoder,   sensorQuadEncoder)
+#pragma config(Sensor, dgtl7,  handEncoder,    sensorQuadEncoder)
 #pragma config(Motor,  port2,           frontRight,    tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port3,           frontLeft,     tmotorVex393_MC29, openLoop, reversed)
-#pragma config(Motor,  port4,           backRight,     tmotorVex393_MC29, openLoop)
-#pragma config(Motor,  port5,           backLeft,      tmotorVex393_MC29, openLoop)
+#pragma config(Motor,  port4,           handRight,     tmotorVex393_MC29, openLoop)
+#pragma config(Motor,  port5,           handLeft,      tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port6,           topLeft,       tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port7,           topRight,      tmotorVex393_MC29, openLoop, reversed)
 #pragma config(Motor,  port8,           bottomLeft,    tmotorVex393_MC29, openLoop)
@@ -90,6 +91,7 @@
 #include "convenientMacros.h"
 #include "motorControlTypes.h"
 #include "armControl.h"
+#include "handControl.h"
 #include "driveControl.h"
 
 
@@ -107,6 +109,7 @@ void pre_auton()
 	bStopTasksBetweenModes = true;
 
 	constructArmMotorControls();
+	constructHandMotorControls();
 	constructDriveMotorControls();
 }
 
@@ -121,8 +124,15 @@ void pre_auton()
 
 bool autonomousComplete = false;
 
+bool holdHandRelative = false;		// When true, hand stays relative to ground regardless of arm position
+float armAngleStart_deg = 0.0;
+float handAngleStart_deg = 0.0;
+
+
 task autonomous()
 {
+	autonomousComplete = false;
+
 	// Assume arm control and drive controls have been constructed
 
 	// Place the motor control loops at higher priority than the main loop
@@ -132,17 +142,47 @@ task autonomous()
 
 	// Need arm control during autonomous mode
 	startTask(armControl, controlPriority);
+	startTask(handControl, controlPriority);
 
 	// Need drive position control during autonomous mode
 	startTask(drivePositionControl, controlPriority);
 
-	move(0.1);
+	move(47.0 * IN_2_M);
+
 	wait1Msec(1000);
-	move(-0.1);
+
+	armAngleStart_deg = getArmPosition();
+	handAngleStart_deg = getHandPosition();
+	setArmPosition(130.0);
+
+	while (fabs(130.0 - getArmPosition()) > 5.0)
+	{
+		float deltaArm_deg = getArmPosition() - armAngleStart_deg;
+		setHandPosition(handAngleStart_deg - deltaArm_deg);
+	}
+
+	wait1Msec(500);
+
+	move(6.0 * IN_2_M);
+
+	wait1Msec(500);
+
+	for (unsigned int i = 0; i < 5; ++i)
+	{
+		setHandPosition(getHandPosition() + 10.0);
+		wait1Msec(100);
+	}
+
 	wait1Msec(1000);
-	move(0.3);
+
+	setHandPosition(-90.0);
+
+	setArmPosition(0.0);
+
 	wait1Msec(1000);
-	move(-0.3);
+
+	setHandPosition(0.0);
+
 
 	autonomousComplete = true;
 }
@@ -156,76 +196,119 @@ task autonomous()
 //                                                                                             //
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
-bool armUp = false;
-bool partialArmUp = false;
 int frontback = 1;
-TVexJoysticks turnControl = Ch4;
+
+const TVexJoysticks HAND_CONTROL  = Ch2;
+const TVexJoysticks DRIVE_CONTROL = Ch3;
+const TVexJoysticks TURN_CONTROL  = Ch4;
+
+const int MAX_JOYSTICK_COMMAND = 127;
+
+const TVexJoysticks ALL_DOWN = Btn6D;
+const TVexJoysticks HAND_UP  = Btn6U;
+const TVexJoysticks LIFT     = Btn5U;
+const TVexJoysticks DUMP     = Btn5D;
+
+const TVexJoysticks BACK_IS_FRONT  = Btn7D;
+const TVexJoysticks FRONT_IS_FRONT = Btn7U;
+
+const TVexJoysticks RESET_ARM_HAND = Btn8R;
+
 
 task usercontrol()
 {
-	//startTask(autonomous);
-	//while (! autonomousComplete)
-	//{
-	//	EndTimeSlice();
-	//}
+
+		//startTask(autonomous);
+		//EndTimeSlice();
+		//while (! autonomousComplete)
+		//{
+		//	EndTimeSlice();
+		//}
+		//stopTask(drivePositionControl);
+		//stopTask(autonomous);
+
+
+	// If (for some reason during testing and such) the autonomous task and subtasks
+  // are still running we will need to stop them before continuing
+  stopTask(armControl);
+  stopTask(handControl);
+  stopTask(drivePositionControl);
+  stopTask(autonomous);
 
 	// Assume arm controls and drive controls have been constructed
 
 	// Place the motor control loop at higher priority than the main loop
 	// so we can ensure more stable application of time. The motor control
 	// loop must sleep long enough for other tasks to get execution time
-	short armControlPriority = getTaskPriority(usercontrol) + 1;
-	startTask(armControl, armControlPriority);
+	short controlPriority = getTaskPriority(usercontrol) + 1;
+	startTask(armControl, controlPriority);
+	startTask(handControl, controlPriority);
 
 	// Only need drive speed control in user control mode
 	startTask(driveSpeedControl);
 
 	for EVER
 	{
+
 		// Create toggle to switch front and back
-	  if (vexRT[Btn8D] == 1)
+	  if (vexRT[BACK_IS_FRONT] == 1)
 	  {
 	  	frontback = -1;
 	  }
-	  else if (vexRT[Btn8U] == 1)
+	  else if (vexRT[FRONT_IS_FRONT] == 1)
 	  {
 	  	frontback = 1;
-	  }
-
-	  // Create toggle to switch joystick right/left
-	  if (vexRT[Btn8R] == 1)
-	  {
-	  	turnControl = Ch1;
-	  }
-	  else if (vexRT[Btn8L] == 1)
-	  {
-	  	turnControl = Ch4;
 	  }
 
 		// Read the joysticks for drive control
 	  // passing the latest command for the drive speed task
 	  // to pick up on next cycle
-		driveSpeed = frontback * deadband(vexRT[Ch3]);
-		turnCoef   = deadband(vexRT[turnControl]);
+		driveSpeed = frontback * deadband(vexRT[DRIVE_CONTROL]);
+		turnCoef   = deadband(vexRT[TURN_CONTROL]);
 
-		// Use up/down buttons for all the way up or down
-		if (vexRT[Btn5U] == 1)
+		// Preset commands
+		if (vexRT[RESET_ARM_HAND])
 		{
-			setArmPosition(120.0);
-		}
-		else if (vexRT[Btn5D] == 1)
-		{
+			holdHandRelative = false;
 			setArmPosition(0.0);
+			setHandPosition(0.0);
+		}
+		else if (vexRT[ALL_DOWN])
+		{
+			holdHandRelative = false;
+			setArmPosition(0.0);
+			setHandPosition(-90.0);
+		}
+		else if (vexRT[HAND_UP])
+		{
+			holdHandRelative = false;
+			setHandPosition(0.0);
+		}
+		else if (vexRT[LIFT])
+		{
+			if (holdHandRelative == false)
+			{
+				holdHandRelative = true;		// Maintain the relative orientation of the hand
+				armAngleStart_deg = getArmPosition();
+				handAngleStart_deg = getHandPosition();
+
+				setArmPosition(130.0);
+			}
+		}
+		else if (vexRT[DUMP])
+		{
+			holdHandRelative = false;
+			for (unsigned int i = 0; i < 5; ++i)
+			{
+				setHandPosition(getHandPosition() + 10.0);
+				wait1Msec(100);
+			}
 		}
 
-		// Use up/down buttons for 1/2 way up or all the way down
-		if (vexRT[Btn6U] == 1)
+		if (holdHandRelative)
 		{
-			setArmPosition(60.0);
-		}
-		else if (vexRT[Btn6D] == 1)
-		{
-			setArmPosition(0.0);
+			float deltaArm_deg = getArmPosition() - armAngleStart_deg;
+			setHandPosition(handAngleStart_deg - deltaArm_deg);
 		}
 
 		EndTimeSlice();
@@ -250,7 +333,8 @@ task main() {
 
 	startTask(usercontrol);
 
-	for EVER {
+	for EVER
+	{
 		wait10Msec(100);
 	}
 
