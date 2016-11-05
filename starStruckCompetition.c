@@ -124,6 +124,11 @@ void pre_auton()
 
 bool autonomousComplete = false;
 
+bool holdHandRelative = false;		// When true, hand stays relative to ground regardless of arm position
+float armAngleStart_deg = 0.0;
+float handAngleStart_deg = 0.0;
+
+
 task autonomous()
 {
 	autonomousComplete = false;
@@ -142,30 +147,42 @@ task autonomous()
 	// Need drive position control during autonomous mode
 	startTask(drivePositionControl, controlPriority);
 
-	const long WAIT_MSEC = 2000;
-	setArmPosition(60.0);
-	wait1Msec(WAIT_MSEC);
-	move(0.3);
-	wait1Msec(WAIT_MSEC);
-	move(-0.3);
-	wait1Msec(WAIT_MSEC);
-	move(0.3);
-	wait1Msec(WAIT_MSEC);
-	move(-0.3);
-	wait1Msec(WAIT_MSEC);
-	turn(45.0);
-	wait1Msec(WAIT_MSEC);
-	turn(-90.0);
-	wait1Msec(WAIT_MSEC);
-	turn(45.0);
-	wait1Msec(WAIT_MSEC);
-	turn(-90.0);
-	wait1Msec(WAIT_MSEC);
-	turn(180.0);
-	wait1Msec(WAIT_MSEC);
-	turn(-90.0);
-	wait1Msec(WAIT_MSEC);
+	move(47.0 * IN_2_M);
+
+	wait1Msec(1000);
+
+	armAngleStart_deg = getArmPosition();
+	handAngleStart_deg = getHandPosition();
+	setArmPosition(130.0);
+
+	while (fabs(130.0 - getArmPosition()) > 5.0)
+	{
+		float deltaArm_deg = getArmPosition() - armAngleStart_deg;
+		setHandPosition(handAngleStart_deg - deltaArm_deg);
+	}
+
+	wait1Msec(500);
+
+	move(6.0 * IN_2_M);
+
+	wait1Msec(500);
+
+	for (unsigned int i = 0; i < 5; ++i)
+	{
+		setHandPosition(getHandPosition() + 10.0);
+		wait1Msec(100);
+	}
+
+	wait1Msec(1000);
+
+	setHandPosition(-90.0);
+
 	setArmPosition(0.0);
+
+	wait1Msec(1000);
+
+	setHandPosition(0.0);
+
 
 	autonomousComplete = true;
 }
@@ -180,23 +197,37 @@ task autonomous()
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 int frontback = 1;
-const TVexJoysticks HAND_CONTROL = Ch2;
+
+const TVexJoysticks HAND_CONTROL  = Ch2;
 const TVexJoysticks DRIVE_CONTROL = Ch3;
-const TVexJoysticks TURN_CONTROL = Ch4;
+const TVexJoysticks TURN_CONTROL  = Ch4;
 
 const int MAX_JOYSTICK_COMMAND = 127;
 
-const TVexJoysticks ALL_DOWN = Btn7U;
-const TVexJoysticks HAND_UP  = Btn7R;
-const TVexJoysticks LIFT     = Btn7D;
-const TVexJoysticks DUMP     = Btn7L;
+const TVexJoysticks ALL_DOWN = Btn6D;
+const TVexJoysticks HAND_UP  = Btn6U;
+const TVexJoysticks LIFT     = Btn5U;
+const TVexJoysticks DUMP     = Btn5D;
 
-bool holdHandRelative = false;		// When true, hand stays relative to ground regardless of arm position
-float armAngleStart_deg = 0.0;
-float handAngleStart_deg = 0.0;
+const TVexJoysticks BACK_IS_FRONT  = Btn7D;
+const TVexJoysticks FRONT_IS_FRONT = Btn7U;
+
+const TVexJoysticks RESET_ARM_HAND = Btn8R;
+
 
 task usercontrol()
 {
+
+		//startTask(autonomous);
+		//EndTimeSlice();
+		//while (! autonomousComplete)
+		//{
+		//	EndTimeSlice();
+		//}
+		//stopTask(drivePositionControl);
+		//stopTask(autonomous);
+
+
 	// If (for some reason during testing and such) the autonomous task and subtasks
   // are still running we will need to stop them before continuing
   stopTask(armControl);
@@ -218,32 +249,13 @@ task usercontrol()
 
 	for EVER
 	{
-		// Special button combination to trigger autonomous test
-		if ((vexRT[Btn7U] == 1) &&
-				(vexRT[Btn7D] == 1) &&
-				(vexRT[Btn7L] == 1) &&
-				(vexRT[Btn7R] == 1))
-		{
-			stopTask(driveSpeedControl);
-
-			startTask(autonomous);
-			EndTimeSlice();
-			while (! autonomousComplete)
-			{
-				EndTimeSlice();
-			}
-			stopTask(drivePositionControl);
-			stopTask(autonomous);
-
-			startTask(driveSpeedControl);
-		}
 
 		// Create toggle to switch front and back
-	  if (vexRT[Btn8D] == 1)
+	  if (vexRT[BACK_IS_FRONT] == 1)
 	  {
 	  	frontback = -1;
 	  }
-	  else if (vexRT[Btn8U] == 1)
+	  else if (vexRT[FRONT_IS_FRONT] == 1)
 	  {
 	  	frontback = 1;
 	  }
@@ -254,57 +266,14 @@ task usercontrol()
 		driveSpeed = frontback * deadband(vexRT[DRIVE_CONTROL]);
 		turnCoef   = deadband(vexRT[TURN_CONTROL]);
 
-		// Read joystick for hand control
-		// NOTE: Later we will add an "orientation stabilized"
-		// or "arm tracking" mode where the hand angle relative
-		// to the floor is held constant based on the arm angle
-
-		//float handAngle_deg = getHandPosition();
-		//float handAngleRate = deadband(vexRT[HAND_CONTROL]);
-
-		// Limit the hand angle rate
-		// Actual rate depends on task loop timing
-		// Can add kinematic calculation later
-		//float handStep_deg = 0.25 * handAngleRate / MAX_JOYSTICK_COMMAND;
-		//handAngle_deg -= handStep_deg;	// Forward joystick equal hand down
-
-		//// Limit hand angle
-		//// For now the hand starts at 0 (curled to arm) and -90 is extended toward floor (or back of robot)
-		//if (handAngle_deg > 0.0)
-		//{
-		//	handAngle_deg = 0.0;
-		//}
-		//else if (handAngle_deg < -90.0)
-		//{
-		//	handAngle_deg = -90.0;
-		//}
-
-		//setHandPosition(handAngle_deg);
-
-		// Use up/down buttons for various arm commands
-		// TODO: Need to use better semantics
-		// TODO: Semantics should be in terms of horizon or vertical
-		// TODO: 0.0 degrees should be horizontal hold with +up and -down
-		// TODO: A command for bottom and top would be useful
-		if (vexRT[Btn5D] == 1)
-		{
-			setArmPosition(0.0);
-		}
-		else if (vexRT[Btn5U] == 1)
-		{
-			setArmPosition(120.0);
-		}
-		else if (vexRT[Btn6U] == 1)
-		{
-			setArmPosition(60.0);
-		}
-		else if (vexRT[Btn6D] == 1)
-		{
-			setArmPosition(30.0);
-		}
-
 		// Preset commands
-		if (vexRT[ALL_DOWN])
+		if (vexRT[RESET_ARM_HAND])
+		{
+			holdHandRelative = false;
+			setArmPosition(0.0);
+			setHandPosition(0.0);
+		}
+		else if (vexRT[ALL_DOWN])
 		{
 			holdHandRelative = false;
 			setArmPosition(0.0);
@@ -319,16 +288,21 @@ task usercontrol()
 		{
 			if (holdHandRelative == false)
 			{
-				holdHandRelative = true;
+				holdHandRelative = true;		// Maintain the relative orientation of the hand
 				armAngleStart_deg = getArmPosition();
 				handAngleStart_deg = getHandPosition();
+
 				setArmPosition(130.0);
 			}
 		}
 		else if (vexRT[DUMP])
 		{
 			holdHandRelative = false;
-			setHandPosition(-30.0);
+			for (unsigned int i = 0; i < 5; ++i)
+			{
+				setHandPosition(getHandPosition() + 10.0);
+				wait1Msec(100);
+			}
 		}
 
 		if (holdHandRelative)
