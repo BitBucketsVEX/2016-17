@@ -17,7 +17,7 @@
 //Competition Control and Duration Settings
 #pragma competitionControl(Competition)
 #pragma autonomousDuration(20)
-#pragma userControlDuration(120)
+#pragma userControlDuration(240)
 
 
 // Comment/uncomment this TEST_SIM flag to switch between real and emulation
@@ -147,26 +147,36 @@ task autonomous()
 	// Need drive position control during autonomous mode
 	startTask(drivePositionControl, controlPriority);
 
-	move(47.0 * IN_2_M);
+	// Move forward most of the way to the fence
+	move(42.0 * IN_2_M);
 
 	wait1Msec(1000);
 
+	// Start moving arm up and collect current hand position
+	// so we can hold the hand orientation while the arm is moving
 	armAngleStart_deg = getArmPosition();
 	handAngleStart_deg = getHandPosition();
 	setArmPosition(130.0);
 
-	while (fabs(130.0 - getArmPosition()) > 5.0)
+	// This loop maintains the hand position while we wait
+	// for the arm to move
+	while (fabs(130.0 - getArmPosition()) > 10.0)
 	{
 		float deltaArm_deg = getArmPosition() - armAngleStart_deg;
 		setHandPosition(handAngleStart_deg - deltaArm_deg);
 	}
 
-	wait1Msec(500);
+	wait1Msec(1000);
 
-	move(6.0 * IN_2_M);
+	// Now that the arm is up, move slightly forward
+	move(16.0 * IN_2_M);
 
-	wait1Msec(500);
+	wait1Msec(1000);
 
+	wait1Msec(1000);
+
+	// This loop commands the dump in small steps
+	// to prevent the hand from bouncing.
 	for (unsigned int i = 0; i < 5; ++i)
 	{
 		setHandPosition(getHandPosition() + 10.0);
@@ -175,6 +185,10 @@ task autonomous()
 
 	wait1Msec(1000);
 
+	// Reset the hand and arm positions to
+	// the starting point, but we must clear the fence
+	// and also NOT tip the robot... this requires
+	// a little timing to the hand motion
 	setHandPosition(-90.0);
 
 	setArmPosition(0.0);
@@ -215,9 +229,12 @@ const TVexJoysticks FRONT_IS_FRONT = Btn7U;
 const TVexJoysticks RESET_ARM_HAND = Btn8R;
 
 
+
+bool victoryDance = false;
+
 task usercontrol()
 {
-
+    // Uncomment for auto test
 		//startTask(autonomous);
 		//EndTimeSlice();
 		//while (! autonomousComplete)
@@ -258,6 +275,33 @@ task usercontrol()
 	  else if (vexRT[FRONT_IS_FRONT] == 1)
 	  {
 	  	frontback = 1;
+	  }
+
+	  if (vexRT[Btn8L] == 1 && vexRT[Btn8D] == 1 && vexRT[Btn8U] == 1 && victoryDance == false)
+	  {
+	  	victoryDance = true;
+
+	  	setHandPosition(0.0);
+			wait1Msec(1000);
+
+			// Start moving arm up and collect current hand position
+			// so we can hold the hand orientation while the arm is moving
+			armAngleStart_deg = getArmPosition();
+			handAngleStart_deg = getHandPosition();
+			setArmPosition(130.0);
+
+			// This loop maintains the hand position while we wait
+			// for the arm to move
+			while (fabs(130.0 - getArmPosition()) > 10.0)
+			{
+				float deltaArm_deg = getArmPosition() - armAngleStart_deg;
+				setHandPosition(handAngleStart_deg - deltaArm_deg);
+			}
+
+
+			turn(360 * 5);
+
+			victoryDance = false;
 	  }
 
 		// Read the joysticks for drive control
