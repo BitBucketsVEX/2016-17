@@ -14,20 +14,21 @@ struct motorControlType armMotors[4];
 
 // Functions to create and control arm motors as single call
 bool armMotorsConstructed = false;
-float armKp = 2.0;
+float armKp = 3.0;
 float armKi = 0.0;
 float armKd = 0.0;
 float armKb = 10.0;
 float initialAngle_deg = -50.0;
+float armLimitFactor = 0.5;
 
 void constructArmMotorControls(void)
 {
 	if ( ! armMotorsConstructed)
 	{
-		constructMotorControl(&armMotors[0],topRight,     armEncoder, armKp, armKi, armKd, armKb, initialAngle_deg);
-		constructMotorControl(&armMotors[1],topLeft,      armEncoder, armKp, armKi, armKd, armKb, initialAngle_deg);
-		constructMotorControl(&armMotors[2],bottomRight,  armEncoder, armKp, armKi, armKd, armKb, initialAngle_deg);
-		constructMotorControl(&armMotors[3],bottomLeft,   armEncoder, armKp, armKi, armKd, armKb, initialAngle_deg);
+		constructMotorControl(&armMotors[0],topRight,     armEncoder, armKp, armKi, armKd, armKb, initialAngle_deg, armLimitFactor);
+		constructMotorControl(&armMotors[1],topLeft,      armEncoder, armKp, armKi, armKd, armKb, initialAngle_deg, armLimitFactor);
+		constructMotorControl(&armMotors[2],bottomRight,  armEncoder, armKp, armKi, armKd, armKb, initialAngle_deg, armLimitFactor);
+		constructMotorControl(&armMotors[3],bottomLeft,   armEncoder, armKp, armKi, armKd, armKb, initialAngle_deg, armLimitFactor);
 
 		armMotorsConstructed = true;
 	}

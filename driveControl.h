@@ -154,8 +154,8 @@ void constructDriveMotorControls(void)
 {
   if ( ! driveMotorsConstructed)
   {
-    constructMotorControl(&driveMotors[DMI_FRONT_RIGHT], frontRight, rightEncoder, driveKp, driveKi, driveKd, driveKb, 0.0);
-    constructMotorControl(&driveMotors[DMI_FRONT_LEFT],  frontLeft,  leftEncoder,  driveKp, driveKi, driveKd, driveKb, 0.0);
+    constructMotorControl(&driveMotors[DMI_FRONT_RIGHT], frontRight, rightEncoder, driveKp, driveKi, driveKd, driveKb, 0.0, 1.0);
+    constructMotorControl(&driveMotors[DMI_FRONT_LEFT],  frontLeft,  leftEncoder,  driveKp, driveKi, driveKd, driveKb, 0.0, 1.0);
 
     driveMotorsConstructed = true;
   }

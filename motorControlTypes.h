@@ -55,11 +55,19 @@ typedef struct
 	float kb;
 	int pid;
 	float biasDeg;
+
+	float limitFactor;
+
+	// elements to keep track of coupled stabilization
+	bool stabilize;
+	float startMasterAngle_deg;
+	float startSlaveAngle_deg;
+
 } motorControlType;
 
 // Define operations for the motorControlType (similar to what we might have in C++ so the concepts will port
 // easily if ROBOTC ever grows up
-void constructMotorControl(motorControlType *this, tMotor mId, tSensors sId, float kp, float ki, float kd, float kb, float biasDeg)
+void constructMotorControl(motorControlType *this, tMotor mId, tSensors sId, float kp, float ki, float kd, float kb, float biasDeg, float limitFactor)
 {
 	this->mId = mId;
 	this->sId = sId;
@@ -73,6 +81,13 @@ void constructMotorControl(motorControlType *this, tMotor mId, tSensors sId, flo
 	this->kb = kb;
 	this->pid = 0;
 	this->biasDeg = biasDeg;
+
+	this->limitFactor = limitFactor;
+
+	this->stabilize = false;
+	this->startMasterAngle_deg = 0.0;
+	this->startSlaveAngle_deg = 0.0;
+
 }
 
 // Each motor can be set to an independent position
@@ -92,7 +107,6 @@ bool getEnable(motorControlType *this)
 	return this->enabled;
 }
 
-
 // For every "set" there is a "get" function
 void setPosition(motorControlType *this, float positionDeg)
 {
@@ -109,6 +123,21 @@ float getPosition(motorControlType *this)
 float getLastCommand(motorControlType *this)
 {
 	return this->commandDeg;
+}
+
+void enableStabilization(motorControlType *this, motorControlType *master)
+{
+	// Only initialize once; force disable to reinit
+	if (! this->stabilize)
+	{
+		this->stabilize = true;
+		this->startMasterAngle_deg = getPosition(master);
+		this->startSlaveAngle_deg  = getPosition(this);
+	}
+}
+void disableStabilization(motorControlType *this)
+{
+	this->stabilize = false;
 }
 
 void resetPosition(motorControlType *this)
@@ -136,6 +165,11 @@ void maintainPosition(motorControlType *this)
 	if (fabs(error) > 0)
 	{
 		// make the speed proportional to the error
+	  float stabilizeGain = 1.0;
+	  if (this->stabilize)
+	  {
+	  	stabilizeGain = 2.0;
+	  }
 	  this->pid = (int) (this->kp * error);
 
 	  // Add bias compensation (e.g., a gravity compensator when commanding 0 will not hold)
@@ -153,7 +187,7 @@ void maintainPosition(motorControlType *this)
 	  {
 	  	this->pid = -MAX_MOTOR_COMMAND;
 	  }
-	  motor[this->mId] = this->pid;
+	  motor[this->mId] = (int)(this->limitFactor * this->pid);
 	}
 	else
 	{

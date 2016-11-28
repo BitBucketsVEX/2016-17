@@ -277,33 +277,6 @@ task usercontrol()
 	  	frontback = 1;
 	  }
 
-	  if (vexRT[Btn8L] == 1 && vexRT[Btn8D] == 1 && vexRT[Btn8U] == 1 && victoryDance == false)
-	  {
-	  	victoryDance = true;
-
-	  	setHandPosition(0.0);
-			wait1Msec(1000);
-
-			// Start moving arm up and collect current hand position
-			// so we can hold the hand orientation while the arm is moving
-			armAngleStart_deg = getArmPosition();
-			handAngleStart_deg = getHandPosition();
-			setArmPosition(130.0);
-
-			// This loop maintains the hand position while we wait
-			// for the arm to move
-			while (fabs(130.0 - getArmPosition()) > 10.0)
-			{
-				float deltaArm_deg = getArmPosition() - armAngleStart_deg;
-				setHandPosition(handAngleStart_deg - deltaArm_deg);
-			}
-
-
-			turn(360 * 5);
-
-			victoryDance = false;
-	  }
-
 		// Read the joysticks for drive control
 	  // passing the latest command for the drive speed task
 	  // to pick up on next cycle
@@ -314,18 +287,21 @@ task usercontrol()
 		if (vexRT[RESET_ARM_HAND])
 		{
 			holdHandRelative = false;
+			disableHandStabilization();
 			setArmPosition(0.0);
 			setHandPosition(0.0);
 		}
 		else if (vexRT[ALL_DOWN])
 		{
 			holdHandRelative = false;
+			disableHandStabilization();
 			setArmPosition(0.0);
-			setHandPosition(-90.0);
+			setHandPosition(-100.0);
 		}
 		else if (vexRT[HAND_UP])
 		{
 			holdHandRelative = false;
+			disableHandStabilization();
 			setHandPosition(0.0);
 		}
 		else if (vexRT[LIFT])
@@ -333,6 +309,7 @@ task usercontrol()
 			if (holdHandRelative == false)
 			{
 				holdHandRelative = true;		// Maintain the relative orientation of the hand
+				enableHandStabilization();
 				armAngleStart_deg = getArmPosition();
 				handAngleStart_deg = getHandPosition();
 
@@ -342,18 +319,20 @@ task usercontrol()
 		else if (vexRT[DUMP])
 		{
 			holdHandRelative = false;
-			for (unsigned int i = 0; i < 5; ++i)
+			disableHandStabilization();
+			float targetPosition_deg = getHandPosition() + 50.0;		// Based on geometry of fence if hand starts from vertical
+			if (targetPosition_deg > 0.0)
 			{
-				setHandPosition(getHandPosition() + 10.0);
-				wait1Msec(100);
+				targetPosition_deg = 0.0;		// Don't go past the arm
 			}
+			setHandPosition(targetPosition_deg);
 		}
 
-		if (holdHandRelative)
-		{
-			float deltaArm_deg = getArmPosition() - armAngleStart_deg;
-			setHandPosition(handAngleStart_deg - deltaArm_deg);
-		}
+		//if (holdHandRelative)
+		//{
+		//	float deltaArm_deg = getArmPosition() - armAngleStart_deg;
+		//	setHandPosition(handAngleStart_deg - deltaArm_deg);
+		//}
 
 		EndTimeSlice();
 	}

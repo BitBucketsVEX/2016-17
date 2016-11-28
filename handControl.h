@@ -6,6 +6,11 @@
 #include "convenientMacros.h"
 #include "motorControlTypes.h"
 
+// Couple hand to arm for stabilization of hand
+// We have to do this because dependency injection via function pointer
+// is not supported by ROBOT C
+#include "armControl.h"
+
 // -------------------------------------------------------------------------
 // Hand Control
 // -------------------------------------------------------------------------
@@ -14,18 +19,19 @@ struct motorControlType handMotors[2];
 
 // Functions to create and control hand motors as single call
 bool handMotorsConstructed = false;
-float handKp = 2.0;
+float handKp = 4.0;
 float handKi = 0.0;
 float handKd = 0.0;
 float handKb = 0.0;
 float handBiasAngle_deg = 0.0;
+float handLimitFactor = 1.0;
 
 void constructHandMotorControls(void)
 {
 	if ( ! handMotorsConstructed)
 	{
-		constructMotorControl(&handMotors[0],handRight,     handEncoder, handKp, handKi, handKd, handKb, handBiasAngle_deg);
-		constructMotorControl(&handMotors[1],handLeft,      handEncoder, handKp, handKi, handKd, handKb, handBiasAngle_deg);
+		constructMotorControl(&handMotors[0],handRight,     handEncoder, handKp, handKi, handKd, handKb, handBiasAngle_deg, handLimitFactor);
+		constructMotorControl(&handMotors[1],handLeft,      handEncoder, handKp, handKi, handKd, handKb, handBiasAngle_deg, handLimitFactor);
 
 		handMotorsConstructed = true;
 	}
@@ -70,10 +76,34 @@ void maintainHandPosition(void)
 		// Assume that hand position is controlled at high priority
 		// eliminating the need to hog the CPU
 		maintainPosition(&handMotors[i]);
+
+		if (handMotors[i].stabilize)
+		{
+			float deltaArm_deg = getArmPosition() - handMotors[i].startMasterAngle_deg;
+			setHandPosition(handMotors[i].startSlaveAngle_deg - deltaArm_deg);
+		}
 	}
 }
 
+void enableHandStabilization(void)
+{
+	hogCPU();
+	for (int i = 0; i < LENGTH(handMotors); ++i)
+	{
+		enableStabilization(&handMotors[i], &armMotors[0]);
+	}
+	releaseCPU();
+}
 
+void disableHandStabilization(void)
+{
+	hogCPU();
+	for (int i = 0; i < LENGTH(handMotors); ++i)
+	{
+		disableStabilization(&handMotors[i]);
+	}
+	releaseCPU();
+}
 
 // Let the motor position control run as a concurrent activity
 // to drive and joystick functions; this allows some control over
