@@ -22,6 +22,7 @@ bool handMotorsConstructed = false;
 float handKp = 4.0;
 float handKi = 0.0;
 float handKd = 0.0;
+float handKf = 0.0;
 float handKb = 0.0;
 float handBiasAngle_deg = 0.0;
 float handLimitFactor = 1.0;
@@ -30,8 +31,8 @@ void constructHandMotorControls(void)
 {
 	if ( ! handMotorsConstructed)
 	{
-		constructMotorControl(&handMotors[0],handRight,     handEncoder, handKp, handKi, handKd, handKb, handBiasAngle_deg, handLimitFactor);
-		constructMotorControl(&handMotors[1],handLeft,      handEncoder, handKp, handKi, handKd, handKb, handBiasAngle_deg, handLimitFactor);
+		constructMotorControl(&handMotors[0],handRight,     handEncoder, handKp, handKi, handKd, handKf, handKb, handBiasAngle_deg, handLimitFactor);
+		constructMotorControl(&handMotors[1],handLeft,      handEncoder, handKp, handKi, handKd, handKf, handKb, handBiasAngle_deg, handLimitFactor);
 
 		handMotorsConstructed = true;
 	}

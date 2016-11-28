@@ -128,7 +128,10 @@ bool driveMotorsConstructed = false;
 float driveKp = 0.2;
 float driveKi = 0.0;
 float driveKd = 0.0;
+float driveKf = 0.0;
 float driveKb = 0.0;
+float driveBiasAngle_deg = 0.0;
+float driveLimitFactor = 1.0;
 
 // Later, we will keep track of where we are
 bool moving = false;                  // keep track of commands in progress or incomplete
@@ -154,8 +157,8 @@ void constructDriveMotorControls(void)
 {
   if ( ! driveMotorsConstructed)
   {
-    constructMotorControl(&driveMotors[DMI_FRONT_RIGHT], frontRight, rightEncoder, driveKp, driveKi, driveKd, driveKb, 0.0, 1.0);
-    constructMotorControl(&driveMotors[DMI_FRONT_LEFT],  frontLeft,  leftEncoder,  driveKp, driveKi, driveKd, driveKb, 0.0, 1.0);
+    constructMotorControl(&driveMotors[DMI_FRONT_RIGHT], frontRight, rightEncoder, driveKp, driveKi, driveKd, driveKf, driveKb, driveBiasAngle_deg, driveLimitFactor);
+    constructMotorControl(&driveMotors[DMI_FRONT_LEFT],  frontLeft,  leftEncoder,  driveKp, driveKi, driveKd, driveKf, driveKb, driveBiasAngle_deg, driveLimitFactor);
 
     driveMotorsConstructed = true;
   }

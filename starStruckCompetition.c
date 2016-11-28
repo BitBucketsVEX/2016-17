@@ -211,8 +211,10 @@ task autonomous()
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 int frontback = 1;
+bool manualControl = false;
+bool climb = false;		// One way latch
 
-const TVexJoysticks HAND_CONTROL  = Ch2;
+const TVexJoysticks HAND_CONTROL  = Ch1;
 const TVexJoysticks DRIVE_CONTROL = Ch3;
 const TVexJoysticks TURN_CONTROL  = Ch4;
 
@@ -226,11 +228,12 @@ const TVexJoysticks DUMP     = Btn5D;
 const TVexJoysticks BACK_IS_FRONT  = Btn7D;
 const TVexJoysticks FRONT_IS_FRONT = Btn7U;
 
-const TVexJoysticks RESET_ARM_HAND = Btn8R;
+const TVexJoysticks CLIMB_A = Btn7L;
+const TVexJoysticks CLIMB_B = Btn8R;	// Reused
 
-
-
-bool victoryDance = false;
+const TVexJoysticks RESET_ARM_HAND = Btn8D;
+const TVexJoysticks ENABLE_HAND_CONTROL = Btn8L;
+const TVexJoysticks DISABLE_HAND_CONTROL = Btn8R;
 
 task usercontrol()
 {
@@ -267,6 +270,14 @@ task usercontrol()
 	for EVER
 	{
 
+		// Create two-button latching climb command
+		// Once triggered there is no going back
+		if ((vexRT[CLIMB_A] == 1) &&
+			  (vexRT[CLIMB_B] == 1))
+		{
+			climb = true;
+		}
+
 		// Create toggle to switch front and back
 	  if (vexRT[BACK_IS_FRONT] == 1)
 	  {
@@ -277,6 +288,20 @@ task usercontrol()
 	  	frontback = 1;
 	  }
 
+	  // Create toggle to enable/disable manual arm/hand control
+	  if (vexRT[ENABLE_HAND_CONTROL] == 1)
+	  {
+	  	manualControl = true;
+			holdHandRelative = true;
+			enableHandStabilization();
+	  }
+	  else if (vexRT[DISABLE_HAND_CONTROL] == 1)
+	  {
+	  	manualControl = false;
+			holdHandRelative = false;
+			disableHandStabilization();
+		}
+
 		// Read the joysticks for drive control
 	  // passing the latest command for the drive speed task
 	  // to pick up on next cycle
@@ -284,55 +309,67 @@ task usercontrol()
 		turnCoef   = deadband(vexRT[TURN_CONTROL]);
 
 		// Preset commands
-		if (vexRT[RESET_ARM_HAND])
+		if (climb)
 		{
-			holdHandRelative = false;
-			disableHandStabilization();
-			setArmPosition(0.0);
-			setHandPosition(0.0);
+			holdHandRelative = true;		// Just to see it in debug
+			enableHandStabilization();
+			setArmPosition(230.0);
 		}
-		else if (vexRT[ALL_DOWN])
+		else if (manualControl)
 		{
-			holdHandRelative = false;
-			disableHandStabilization();
-			setArmPosition(0.0);
-			setHandPosition(-100.0);
-		}
-		else if (vexRT[HAND_UP])
-		{
-			holdHandRelative = false;
-			disableHandStabilization();
-			setHandPosition(0.0);
-		}
-		else if (vexRT[LIFT])
-		{
-			if (holdHandRelative == false)
+			// Use joystick for relative hand control
+			int manualCoef = deadband(vexRT[HAND_CONTROL]);
+			if (manualCoef != 0)
 			{
-				holdHandRelative = true;		// Maintain the relative orientation of the hand
-				enableHandStabilization();
-				armAngleStart_deg = getArmPosition();
-				handAngleStart_deg = getHandPosition();
-
-				setArmPosition(130.0);
+				setArmPosition(getArmCommand() + (manualCoef / abs(manualCoef)));
 			}
 		}
-		else if (vexRT[DUMP])
+		else
 		{
-			holdHandRelative = false;
-			disableHandStabilization();
-			float targetPosition_deg = getHandPosition() + 50.0;		// Based on geometry of fence if hand starts from vertical
-			if (targetPosition_deg > 0.0)
+			if (vexRT[RESET_ARM_HAND])
 			{
-				targetPosition_deg = 0.0;		// Don't go past the arm
+				holdHandRelative = false;
+				disableHandStabilization();
+				setArmPosition(0.0);
+				setHandPosition(0.0);
 			}
-			setHandPosition(targetPosition_deg);
-		}
+			else if (vexRT[ALL_DOWN])
+			{
+				holdHandRelative = false;
+				disableHandStabilization();
+				setArmPosition(0.0);
+				setHandPosition(-100.0);
+			}
+			else if (vexRT[HAND_UP])
+			{
+				holdHandRelative = false;
+				disableHandStabilization();
+				setHandPosition(0.0);
+			}
+			else if (vexRT[LIFT])
+			{
+				if (holdHandRelative == false)
+				{
+					// Maintain the relative orientation of the hand
+					// Command only once until reset
+					holdHandRelative = true;
+					enableHandStabilization();
 
-		//if (holdHandRelative)
-		//{
-		//	float deltaArm_deg = getArmPosition() - armAngleStart_deg;
-		//	setHandPosition(handAngleStart_deg - deltaArm_deg);
-		//}
+					setArmPosition(130.0);
+				}
+			}
+			else if (vexRT[DUMP])
+			{
+				holdHandRelative = false;
+				disableHandStabilization();
+				float targetPosition_deg = getHandPosition() + 50.0;		// Based on geometry of fence if hand starts from vertical
+				if (targetPosition_deg > 0.0)
+				{
+					targetPosition_deg = 0.0;		// Don't go past the arm
+				}
+				setHandPosition(targetPosition_deg);
+			}
+		} // end if handControl
 
 		EndTimeSlice();
 	}

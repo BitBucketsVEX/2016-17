@@ -52,6 +52,7 @@ typedef struct
 	float kp;
 	float ki;
 	float kd;
+	float kf;
 	float kb;
 	int pid;
 	float biasDeg;
@@ -67,7 +68,7 @@ typedef struct
 
 // Define operations for the motorControlType (similar to what we might have in C++ so the concepts will port
 // easily if ROBOTC ever grows up
-void constructMotorControl(motorControlType *this, tMotor mId, tSensors sId, float kp, float ki, float kd, float kb, float biasDeg, float limitFactor)
+void constructMotorControl(motorControlType *this, tMotor mId, tSensors sId, float kp, float ki, float kd, float kf, float kb, float biasDeg, float limitFactor)
 {
 	this->mId = mId;
 	this->sId = sId;
@@ -78,6 +79,7 @@ void constructMotorControl(motorControlType *this, tMotor mId, tSensors sId, flo
 	this->kp = kp;
 	this->ki = ki;
 	this->kd = kd;
+	this->kf = kf;
 	this->kb = kb;
 	this->pid = 0;
 	this->biasDeg = biasDeg;
@@ -154,46 +156,41 @@ void maintainPosition(motorControlType *this)
 	this->encoderDeg = encoder_tick * DEGREES_PER_TICK;
 	float error = this->commandDeg - this->encoderDeg;
 
-	// No error accumulation at this time
+	// No error accumulation (integral) at this time
 
 	// No error rate at this time
-	this->encoderRPM  = 0.0;	  // TODO: No derivative control at this time
+	this->encoderRPM  = 0.0;	  // No derivative control at this time
 
-	// Compute compensation bias
+  float stabilizeGain = 1.0;
+  if (this->stabilize)
+  {
+  	// Increase gain when stabilizing
+  	stabilizeGain = 2.0;
+  }
+
+	// Compute compensation bias based on simple circular geometry
 	float bias = this->kb * cos((this->encoderDeg - this->biasDeg) * PI / 180);
 
-	if (fabs(error) > 0)
-	{
-		// make the speed proportional to the error
-	  float stabilizeGain = 1.0;
-	  if (this->stabilize)
-	  {
-	  	stabilizeGain = 2.0;
-	  }
-	  this->pid = (int) (this->kp * error);
+	// make the speed proportional to the error
+  this->pid = (int) ((this->kp * error) + (this->kf * this->commandDeg));
 
-	  // Add bias compensation (e.g., a gravity compensator when commanding 0 will not hold)
-	  this->pid += (int) bias;
+  // Add bias compensation (e.g., a gravity compensator when commanding 0 will not hold)
+  this->pid += (int) bias;
 
-	  // Add in integral and derivitive control later if students really need it.
-	  // NOTE: with sensors that read position directly this is almost never needed
-	  // and students tend to defocus from the real problems.
+  // Add in integral and derivitive control later if students really need it.
+  // NOTE: with sensors that read position directly this is almost never needed
+  // and students tend to defocus from the real problems.
 
-	  if (this->pid > MAX_MOTOR_COMMAND)
-	  {
-	  	this->pid = MAX_MOTOR_COMMAND;
-	  }
-	  else if (this->pid < -MAX_MOTOR_COMMAND)
-	  {
-	  	this->pid = -MAX_MOTOR_COMMAND;
-	  }
-	  motor[this->mId] = (int)(this->limitFactor * this->pid);
-	}
-	else
-	{
-		// When within the target tolerance, stop.
-		motor[this->mId] = (int)bias;
-	}
+  const int LIMITED_MOTOR_COMMAND = (int)(this->limitFactor * MAX_MOTOR_COMMAND);
+  if (this->pid > LIMITED_MOTOR_COMMAND)
+  {
+  	this->pid = LIMITED_MOTOR_COMMAND;
+  }
+  else if (this->pid < -LIMITED_MOTOR_COMMAND)
+  {
+  	this->pid = -LIMITED_MOTOR_COMMAND;
+  }
+  motor[this->mId] = this->pid;
 }
 
 
