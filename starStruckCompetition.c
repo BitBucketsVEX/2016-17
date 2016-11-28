@@ -319,10 +319,7 @@ task usercontrol()
 		{
 			// Use joystick for relative hand control
 			int manualCoef = deadband(vexRT[HAND_CONTROL]);
-			if (manualCoef != 0)
-			{
-				setArmPosition(getArmCommand() + (manualCoef / abs(manualCoef)));
-			}
+			setArmSpeed(manualCoef / 2);
 		}
 		else
 		{

@@ -19,7 +19,7 @@ struct motorControlType handMotors[2];
 
 // Functions to create and control hand motors as single call
 bool handMotorsConstructed = false;
-float handKp = 4.0;
+float handKp = 2.0;
 float handKi = 0.0;
 float handKd = 0.0;
 float handKf = 0.0;

@@ -80,8 +80,15 @@ void maintainArmPosition(void)
 	}
 }
 
-
-
+void setArmSpeed(int speed)
+{
+	hogCPU();
+	for (int i = 0; i < LENGTH(armMotors); ++i)
+	{
+		setSpeed(&armMotors[i], speed);
+	}
+	releaseCPU();
+}
 // Let the motor position control run as a concurrent activity
 // to drive and joystick functions; this allows some control over
 // priority to ensure position control is tight

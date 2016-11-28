@@ -57,6 +57,7 @@ typedef struct
 	int pid;
 	float biasDeg;
 
+	int manualSpeedControl;
 	float limitFactor;
 
 	// elements to keep track of coupled stabilization
@@ -84,6 +85,7 @@ void constructMotorControl(motorControlType *this, tMotor mId, tSensors sId, flo
 	this->pid = 0;
 	this->biasDeg = biasDeg;
 
+	this->manualSpeedControl = 0;
 	this->limitFactor = limitFactor;
 
 	this->stabilize = false;
@@ -142,6 +144,17 @@ void disableStabilization(motorControlType *this)
 	this->stabilize = false;
 }
 
+void setSpeed(motorControlType *this, int speed)
+{
+	if ((this->manualSpeedControl != 0) &&
+		  (speed != 0))
+	{
+		// Set position command to current encoder position
+		this->commandDeg = this->encoderDeg;
+	}
+	this->manualSpeedControl = speed;
+}
+
 void resetPosition(motorControlType *this)
 {
 		SensorValue[this->sId] = 0;	// Use the shaft encoder rather than integrated encoders
@@ -150,47 +163,59 @@ void resetPosition(motorControlType *this)
 // A function to actually apply the control to each motor
 void maintainPosition(motorControlType *this)
 {
+
 	long encoder_tick = SensorValue[this->sId];		// Using shaft encoders for the moment
 
 	// Compute error between what we want and what we have
 	this->encoderDeg = encoder_tick * DEGREES_PER_TICK;
-	float error = this->commandDeg - this->encoderDeg;
 
-	// No error accumulation (integral) at this time
+	if (this->manualSpeedControl != 0)
+	{
+	  const int LIMITED_MOTOR_COMMAND = (int)(this->limitFactor * MAX_MOTOR_COMMAND);
+	  if (this->manualSpeedControl > LIMITED_MOTOR_COMMAND)
+	  {
+	  	this->manualSpeedControl = LIMITED_MOTOR_COMMAND;
+	  }
+	  else if (this->manualSpeedControl < -LIMITED_MOTOR_COMMAND)
+	  {
+	  	this->manualSpeedControl = -LIMITED_MOTOR_COMMAND;
+	  }
 
-	// No error rate at this time
-	this->encoderRPM  = 0.0;	  // No derivative control at this time
+		motor[this->mId] = this->manualSpeedControl;
+	}
+	else
+	{
+		float error = this->commandDeg - this->encoderDeg;
 
-  float stabilizeGain = 1.0;
-  if (this->stabilize)
-  {
-  	// Increase gain when stabilizing
-  	stabilizeGain = 2.0;
-  }
+		// No error accumulation (integral) at this time
 
-	// Compute compensation bias based on simple circular geometry
-	float bias = this->kb * cos((this->encoderDeg - this->biasDeg) * PI / 180);
+		// No error rate at this time
+		this->encoderRPM  = 0.0;	  // No derivative control at this time
 
-	// make the speed proportional to the error
-  this->pid = (int) ((this->kp * error) + (this->kf * this->commandDeg));
+		// Compute compensation bias based on simple circular geometry
+		float bias = this->kb * cos((this->encoderDeg - this->biasDeg) * PI / 180);
 
-  // Add bias compensation (e.g., a gravity compensator when commanding 0 will not hold)
-  this->pid += (int) bias;
+		// make the speed proportional to the error
+	  this->pid = (int) ((this->kp * error) + (this->kf * this->commandDeg));
 
-  // Add in integral and derivitive control later if students really need it.
-  // NOTE: with sensors that read position directly this is almost never needed
-  // and students tend to defocus from the real problems.
+	  // Add bias compensation (e.g., a gravity compensator when commanding 0 will not hold)
+	  this->pid += (int) bias;
 
-  const int LIMITED_MOTOR_COMMAND = (int)(this->limitFactor * MAX_MOTOR_COMMAND);
-  if (this->pid > LIMITED_MOTOR_COMMAND)
-  {
-  	this->pid = LIMITED_MOTOR_COMMAND;
-  }
-  else if (this->pid < -LIMITED_MOTOR_COMMAND)
-  {
-  	this->pid = -LIMITED_MOTOR_COMMAND;
-  }
-  motor[this->mId] = this->pid;
+	  // Add in integral and derivitive control later if students really need it.
+	  // NOTE: with sensors that read position directly this is almost never needed
+	  // and students tend to defocus from the real problems.
+
+	  const int LIMITED_MOTOR_COMMAND = (int)(this->limitFactor * MAX_MOTOR_COMMAND);
+	  if (this->pid > LIMITED_MOTOR_COMMAND)
+	  {
+	  	this->pid = LIMITED_MOTOR_COMMAND;
+	  }
+	  else if (this->pid < -LIMITED_MOTOR_COMMAND)
+	  {
+	  	this->pid = -LIMITED_MOTOR_COMMAND;
+	  }
+	  motor[this->mId] = this->pid;
+	} // end if manual speed control
 }
 
 
