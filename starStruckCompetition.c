@@ -211,8 +211,13 @@ task autonomous()
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 int frontback = 1;
+float driveFactor = 1.0;
 bool manualControl = false;
-bool climb = false;		// One way latch
+bool climb = false;
+bool climbing = false;
+bool abort = false;
+
+bool dumping = false;
 
 const TVexJoysticks HAND_CONTROL  = Ch1;
 const TVexJoysticks DRIVE_CONTROL = Ch3;
@@ -277,6 +282,19 @@ task usercontrol()
 		{
 			climb = true;
 		}
+		else
+		{
+			if (climb == true)
+			{
+				// Abort and stop
+				climb = false;
+				climbing = false;
+				abort = true;
+				setArmPosition(getArmPosition());
+				setHandPosition(getHandPosition());
+			}
+
+		}
 
 		// Create toggle to switch front and back
 	  if (vexRT[BACK_IS_FRONT] == 1)
@@ -294,26 +312,37 @@ task usercontrol()
 	  	manualControl = true;
 			holdHandRelative = true;
 			enableHandStabilization();
+			driveFactor = 0.5;
 	  }
 	  else if (vexRT[DISABLE_HAND_CONTROL] == 1)
 	  {
-	  	manualControl = false;
-			holdHandRelative = false;
-			disableHandStabilization();
+	  	if (climb == false)
+	  	{
+		  	manualControl = false;
+				holdHandRelative = false;
+				disableHandStabilization();
+				driveFactor = 1.0;
+			}
 		}
 
 		// Read the joysticks for drive control
 	  // passing the latest command for the drive speed task
 	  // to pick up on next cycle
-		driveSpeed = frontback * deadband(vexRT[DRIVE_CONTROL]);
-		turnCoef   = deadband(vexRT[TURN_CONTROL]);
+		driveSpeed = (int)(driveFactor * (float)(frontback * deadband(vexRT[DRIVE_CONTROL])));
+		turnCoef   = (int)(driveFactor * (float)(deadband(vexRT[TURN_CONTROL])));
 
 		// Preset commands
-		if (climb)
+		if (climb && ! abort)
 		{
-			holdHandRelative = true;		// Just to see it in debug
-			enableHandStabilization();
-			setArmPosition(230.0);
+			holdHandRelative = false;		// Just to see it in debug
+			disableHandStabilization();
+			setHandPosition(getHandPosition() - 45.0);
+			if (climbing == false)
+			{
+				wait1Msec(1000);
+				climbing = true;
+			}
+			setArmPosition(0.0);
 		}
 		else if (manualControl)
 		{
@@ -327,11 +356,22 @@ task usercontrol()
 			{
 				holdHandRelative = false;
 				disableHandStabilization();
+				if (dumping == true)
+				{
+					dumping = false;
+					setHandPosition(getHandPosition() - 70.0);
+					while (abs(getHandPosition() - getHandCommand()) > 10.0)
+					{
+						wait1Msec(10);
+					}
+				}
+
 				setArmPosition(0.0);
 				setHandPosition(0.0);
 			}
 			else if (vexRT[ALL_DOWN])
 			{
+				dumping = false;
 				holdHandRelative = false;
 				disableHandStabilization();
 				setArmPosition(0.0);
@@ -339,12 +379,14 @@ task usercontrol()
 			}
 			else if (vexRT[HAND_UP])
 			{
+				dumping = false;
 				holdHandRelative = false;
 				disableHandStabilization();
 				setHandPosition(0.0);
 			}
 			else if (vexRT[LIFT])
 			{
+				dumping = false;
 				if (holdHandRelative == false)
 				{
 					// Maintain the relative orientation of the hand
@@ -357,14 +399,18 @@ task usercontrol()
 			}
 			else if (vexRT[DUMP])
 			{
-				holdHandRelative = false;
-				disableHandStabilization();
-				float targetPosition_deg = getHandPosition() + 50.0;		// Based on geometry of fence if hand starts from vertical
-				if (targetPosition_deg > 0.0)
+				if (dumping == false)
 				{
-					targetPosition_deg = 0.0;		// Don't go past the arm
+					dumping = true;
+					holdHandRelative = false;
+					disableHandStabilization();
+					float targetPosition_deg = getHandPosition() + 50.0;		// Based on geometry of fence if hand starts from vertical
+					if (targetPosition_deg > 0.0)
+					{
+						targetPosition_deg = 0.0;		// Don't go past the arm
+					}
+					setHandPosition(targetPosition_deg);
 				}
-				setHandPosition(targetPosition_deg);
 			}
 		} // end if handControl
 
