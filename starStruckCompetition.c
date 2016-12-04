@@ -148,55 +148,50 @@ task autonomous()
 	startTask(drivePositionControl, controlPriority);
 
 	// Move forward most of the way to the fence
-	move(42.0 * IN_2_M);
+	move(-44.0 * IN_2_M);
 
 	wait1Msec(1000);
 
-	// Start moving arm up and collect current hand position
-	// so we can hold the hand orientation while the arm is moving
-	armAngleStart_deg = getArmPosition();
-	handAngleStart_deg = getHandPosition();
-	setArmPosition(130.0);
+	// Maintain the relative orientation of the hand
+	// Command only once until reset
+	holdHandRelative = true;
+	enableHandStabilization();
 
-	// This loop maintains the hand position while we wait
-	// for the arm to move
-	while (fabs(130.0 - getArmPosition()) > 10.0)
-	{
-		float deltaArm_deg = getArmPosition() - armAngleStart_deg;
-		setHandPosition(handAngleStart_deg - deltaArm_deg);
-	}
+	setArmPosition(135.0);
 
-	wait1Msec(1000);
+	wait1Msec(3000);
 
-	// Now that the arm is up, move slightly forward
-	move(16.0 * IN_2_M);
-
-	wait1Msec(1000);
-
-	wait1Msec(1000);
-
-	// This loop commands the dump in small steps
-	// to prevent the hand from bouncing.
-	for (unsigned int i = 0; i < 5; ++i)
-	{
-		setHandPosition(getHandPosition() + 10.0);
-		wait1Msec(100);
-	}
-
-	wait1Msec(1000);
-
-	// Reset the hand and arm positions to
-	// the starting point, but we must clear the fence
-	// and also NOT tip the robot... this requires
-	// a little timing to the hand motion
-	setHandPosition(-90.0);
 
 	setArmPosition(0.0);
 
 	wait1Msec(1000);
 
+	holdHandRelative = false
+	disableHandStabilization();
 	setHandPosition(0.0);
 
+	wait1Msec(1000);
+
+	move(12.0 * IN_2_M);
+
+	wait1Msec(1000);
+
+	turn(180.0);
+
+	wait1Msec(1000);
+
+	move(12.0 * IN_2_M);
+
+	wait1Msec(1000);
+
+	//// Maintain the relative orientation of the hand
+	//// Command only once until reset
+	//holdHandRelative = true;
+	//enableHandStabilization();
+
+	//setArmPosition(135.0);
+
+	//wait1Msec(1000);
 
 	autonomousComplete = true;
 }
@@ -217,7 +212,9 @@ bool climb = false;
 bool climbing = false;
 bool abort = false;
 
+bool lifting = false;
 bool dumping = false;
+bool resetDump = false;
 
 const TVexJoysticks HAND_CONTROL  = Ch1;
 const TVexJoysticks DRIVE_CONTROL = Ch3;
@@ -350,6 +347,16 @@ task usercontrol()
 			int manualCoef = deadband(vexRT[HAND_CONTROL]);
 			setArmSpeed(manualCoef / 2);
 		}
+		else if (resetDump)
+		{
+			resetDump = (abs(getHandPosition() - getHandCommand()) > 20.0);
+			if (! resetDump)
+			{
+				 // Finish the reset now that the hand is in position
+					setArmPosition(0.0);
+					setHandPosition(0.0);
+			}
+		}
 		else
 		{
 			if (vexRT[RESET_ARM_HAND])
@@ -358,53 +365,64 @@ task usercontrol()
 				disableHandStabilization();
 				if (dumping == true)
 				{
+					resetDump = true;
 					dumping = false;
-					setHandPosition(getHandPosition() - 70.0);
-					while (abs(getHandPosition() - getHandCommand()) > 10.0)
-					{
-						wait1Msec(10);
-					}
+					setHandPosition(getHandPosition() - 100.0);
 				}
-
-				setArmPosition(0.0);
-				setHandPosition(0.0);
+				else if (lifting == true)
+				{
+					resetDump = true;
+					lifting = false;
+					setHandPosition(getHandPosition() - 50.0);
+				}
 			}
 			else if (vexRT[ALL_DOWN])
 			{
-				dumping = false;
-				holdHandRelative = false;
-				disableHandStabilization();
-				setArmPosition(0.0);
-				setHandPosition(-100.0);
+				if (dumping == false)
+				{
+					holdHandRelative = false;
+					disableHandStabilization();
+					setArmPosition(0.0);
+					setHandPosition(-90.0);
+				}
 			}
 			else if (vexRT[HAND_UP])
 			{
-				dumping = false;
-				holdHandRelative = false;
-				disableHandStabilization();
-				setHandPosition(0.0);
+				// Ignore command until reset issued
+			  // after dumping
+			  if (dumping == false)
+			  {
+					holdHandRelative = false;
+					disableHandStabilization();
+					setHandPosition(0.0);
+				}
 			}
 			else if (vexRT[LIFT])
 			{
-				dumping = false;
-				if (holdHandRelative == false)
-				{
-					// Maintain the relative orientation of the hand
-					// Command only once until reset
-					holdHandRelative = true;
-					enableHandStabilization();
+				// Ignore command until reset issued
+			  // after dumping
+			  if (dumping == false)
+			  {
+			  	lifting = true;
+					if (holdHandRelative == false)
+					{
+						// Maintain the relative orientation of the hand
+						// Command only once until reset
+						holdHandRelative = true;
+						enableHandStabilization();
 
-					setArmPosition(130.0);
+						setArmPosition(135.0);
+					}
 				}
 			}
 			else if (vexRT[DUMP])
 			{
-				if (dumping == false)
+				if ((dumping == false)&&(lifting==true))
 				{
 					dumping = true;
 					holdHandRelative = false;
 					disableHandStabilization();
-					float targetPosition_deg = getHandPosition() + 50.0;		// Based on geometry of fence if hand starts from vertical
+					float targetPosition_deg = getHandPosition() + 70.0;		// Based on geometry of fence if hand starts from vertical
 					if (targetPosition_deg > 0.0)
 					{
 						targetPosition_deg = 0.0;		// Don't go past the arm
