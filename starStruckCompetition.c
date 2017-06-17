@@ -166,7 +166,7 @@ task autonomous()
 
 	wait1Msec(1000);
 
-	holdHandRelative = false
+	holdHandRelative = false;
 	disableHandStabilization();
 	setHandPosition(0.0);
 
