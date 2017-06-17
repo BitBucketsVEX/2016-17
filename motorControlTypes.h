@@ -41,8 +41,10 @@ const float DEGREES_PER_TICK = 1.0 / TICKS_PER_DEGREE;
 // control parameters, and status. Since RobotC
 // is C and not C++, we will define separate functions
 // rather than encapsulate the desired behavior
+
 typedef struct
 {
+
 	tMotor mId;
 	tSensors sId;
 	bool enabled;
@@ -214,9 +216,16 @@ void maintainPosition(motorControlType *this)
 	  {
 	  	this->pid = -LIMITED_MOTOR_COMMAND;
 	  }
+
 	  motor[this->mId] = this->pid;
 	} // end if manual speed control
 }
 
-
+task timer() {
+	for EVER {
+		if (time1[timer1] >= 1000) {
+			clearTimer(timer1);
+		}
+	}
+}
 #endif

@@ -30,29 +30,24 @@ void constructArmMotorControls(void)
 		constructMotorControl(&armMotors[1],topLeft,      armEncoder, armKp, armKi, armKd, armKf, armKb, initialAngle_deg, armLimitFactor);
 		constructMotorControl(&armMotors[2],bottomRight,  armEncoder, armKp, armKi, armKd, armKf, armKb, initialAngle_deg, armLimitFactor);
 		constructMotorControl(&armMotors[3],bottomLeft,   armEncoder, armKp, armKi, armKd, armKf, armKb, initialAngle_deg, armLimitFactor);
-
 		armMotorsConstructed = true;
 	}
 }
 
-void resetArmPosition(void)
-{
-	for (int i = 0; i < LENGTH(armMotors); ++i)
-	{
+void resetArmPosition(void) {
+	for (int i = 0; i < LENGTH(armMotors); i++) {
 		resetPosition(&armMotors[i]);
 	}
 }
 
-void setArmPosition(float angle_deg)
-{
+void setArmPosition(float angleDeg) {
 	// Hog the CPU while setting all the positions
   // to ensure they change atomically even for the high priority
   // task
 	hogCPU();
 
-	for (int i = 0; i < LENGTH(armMotors); ++i)
-	{
-		setPosition(&armMotors[i], angle_deg);
+	for (int i = 0; i < LENGTH(armMotors); i++) {
+		setPosition(&armMotors[i], angleDeg);
 	}
 
 	releaseCPU();
@@ -70,10 +65,8 @@ float getArmPosition(void)
 }
 
 
-void maintainArmPosition(void)
-{
-	for (int i = 0; i < LENGTH(armMotors); ++i)
-	{
+void maintainArmPosition(void) {
+	for (int i = 0; i < LENGTH(armMotors); i++) {
 		// Assume that arm position is controlled at high priority
 		// eliminating the need to hog the CPU
 		maintainPosition(&armMotors[i]);
@@ -93,26 +86,25 @@ void setArmSpeed(int speed)
 // to drive and joystick functions; this allows some control over
 // priority to ensure position control is tight
 bool armControlInitialized = false;
-const long ARM_CONTROL_PERIOD_MSEC = 1;
+// const long ARM_CONTROL_PERIOD_MSEC = 1; moved to motorControlTypes.h
 #ifdef TEST_SIM
 	unsigned int armCount = 0;
 #endif
 
-task armControl()
-{
-	if ( ! armControlInitialized)
-	{
+const long ARM_CONTROL_PERIOD_MSEC = 1;
+
+task armControl() {
+	if (!armControlInitialized) {
 		resetArmPosition();
 		armControlInitialized = true;
 	}
 
-	for EVER
-	{
+	for EVER {
 		maintainArmPosition();
 
 #ifdef TEST_SIM
     // only display in emulator
-		displayLCDNumber(0, 2, (armCount++)%100, 3);
+		displayLCDNumber(0, 2, (armCount++) % 100, 3);
 #endif
 
 		wait1Msec(ARM_CONTROL_PERIOD_MSEC);	// Let lower priority tasks execute before resuming control

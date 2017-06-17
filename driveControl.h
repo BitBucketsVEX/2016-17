@@ -45,6 +45,22 @@ int linearize(int vel)
 		pwm = linear[vel];
 	}
 	return pwm;
+	/*//MIN(vel, -MAX_MOTOR_COMMAND);
+
+	/*if (vel > MAX_MOTOR_COMMAND) {
+		vel = MAX_MOTOR_COMMAND;
+	}
+	if (vel < -MAX_MOTOR_COMMAND) {
+		vel = -MAX_MOTOR_COMMAND;
+	}
+
+	pwm = SIGN(vel) * linear[abs(vel)];
+	if (vel < 0) {
+		pwm = -linear[-vel];
+	} else {
+		pwm = linear[vel];
+	}
+	return pwm;*/
 }
 
 int deadband(int vel)
@@ -441,6 +457,7 @@ task drivePositionControl()
 
     wait1Msec(DRIVE_POSITION_CONTROL_PERIOD_MSEC);  // Let lower priority tasks execute before resuming control
   }
+
 }
 
 #endif

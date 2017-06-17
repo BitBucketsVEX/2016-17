@@ -16,7 +16,10 @@
 // Note macros are NOT the best way to do this
 // but since this is C and not C++ this is
 // the only type-independent way to do this
-#define MIN(x,y) ((x < y)? x : y)
-#define MAX(x,y) ((x > y)? x : y)
+#define MIN(x,y) ((x >= y)? x : y)
+#define MAX(x,y) ((x <= y)? x : y)
+#define BOUND(x,a,b) (MAX(MIN(x, a), b))
+
+#define SIGN(x) ((x != 0) ? x / abs(x) : 0)
 
 #endif

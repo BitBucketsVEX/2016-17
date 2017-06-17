@@ -20,6 +20,7 @@
 #pragma userControlDuration(240)
 
 
+
 // Comment/uncomment this TEST_SIM flag to switch between real and emulation
 //#define TEST_SIM
 
@@ -93,6 +94,7 @@
 #include "armControl.h"
 #include "handControl.h"
 #include "driveControl.h"
+#include "autonomous.h"
 
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -231,6 +233,7 @@ task autonomous()
 	//wait1Msec(1000);
 
 	autonomousComplete = true;
+
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -241,7 +244,6 @@ task autonomous()
 // You must modify the code to add your own robot specific commands here.                      //
 //                                                                                             //
 /////////////////////////////////////////////////////////////////////////////////////////////////
-
 
 const TVexJoysticks HAND_CONTROL  = Ch1;
 const TVexJoysticks DRIVE_CONTROL = Ch3;
@@ -513,6 +515,15 @@ task usercontrol()
 			}
 		} // end if handControl
 
+		if (vexRT[Btn8R] == 1) { // for testing of autonomous function only
+			if (auto == false) {
+				startTask(autonomous);
+				auto = true;
+			}
+		} else {
+			auto = false;
+		}
+
 		EndTimeSlice();
 	}
 }
@@ -524,7 +535,8 @@ task main() {
 	//Setup the VEX LCD for displaying tasks
 	clearLCDLine(0);
 	clearLCDLine(1);
-	displayLCDString(0, 0, "0: xx 1: xx");
+	int x = BOUND(0, -127, 127);
+	displayLCDString(x, 0, "0: xx 1: xx");
 
 	pre_auton();
 
