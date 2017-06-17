@@ -124,13 +124,50 @@ void pre_auton()
 
 bool autonomousComplete = false;
 
-bool holdHandRelative = false;		// When true, hand stays relative to ground regardless of arm position
 float armAngleStart_deg = 0.0;
 float handAngleStart_deg = 0.0;
 
+// Resettable states
+// The following should be reset to these initialize states
+// any time either autonomous or usercontrol is entered
+// This protects against a field reset and the drive team
+// forgets to cycle the power.
+int frontback = 1;
+float driveFactor = 1.0;
+bool manualControl = false;
+bool climb = false;
+bool climbing = false;
+bool abort = false;
+
+bool lifting = false;
+bool dumping = false;
+bool resetDump = false;
+
+bool holdHandRelative = false;
+
+void initializeRobot()
+{
+	frontback = 1;
+	driveFactor = 1.0;
+	manualControl = false;
+	climb = false;
+	climbing = false;
+	abort = false;
+
+	lifting = false;
+	dumping = false;
+	resetDump = false;
+
+	holdHandRelative = false;
+
+	// TODO: Add button switch or two to signal when
+	// arm/hand is in initial position then drive
+	// arm/hand until it is properly reset
+}
 
 task autonomous()
 {
+	initializeRobot();
 	autonomousComplete = false;
 
 	// Assume arm control and drive controls have been constructed
@@ -166,7 +203,7 @@ task autonomous()
 
 	wait1Msec(1000);
 
-	holdHandRelative = false
+	holdHandRelative = false;
 	disableHandStabilization();
 	setHandPosition(0.0);
 
@@ -176,7 +213,7 @@ task autonomous()
 
 	wait1Msec(1000);
 
-	turn(180.0);
+	turn(180.0);		// TODO: Turn is imbalanced and does not match desired angle, may be a math problem or may be a wheel problem, not sure yet
 
 	wait1Msec(1000);
 
@@ -205,16 +242,6 @@ task autonomous()
 //                                                                                             //
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
-int frontback = 1;
-float driveFactor = 1.0;
-bool manualControl = false;
-bool climb = false;
-bool climbing = false;
-bool abort = false;
-
-bool lifting = false;
-bool dumping = false;
-bool resetDump = false;
 
 const TVexJoysticks HAND_CONTROL  = Ch1;
 const TVexJoysticks DRIVE_CONTROL = Ch3;
@@ -256,6 +283,8 @@ task usercontrol()
   stopTask(handControl);
   stopTask(drivePositionControl);
   stopTask(autonomous);
+
+  initializeRobot();
 
 	// Assume arm controls and drive controls have been constructed
 
@@ -306,8 +335,23 @@ task usercontrol()
 	  // Create toggle to enable/disable manual arm/hand control
 	  if (vexRT[ENABLE_HAND_CONTROL] == 1)
 	  {
+	  	// When entering manual mode, reset all states
+	  	// TODO: move state reset to function (can we use init?)
 	  	manualControl = true;
 			holdHandRelative = true;
+			resetDump = false;
+			dumping = false;
+			lifting = false;
+
+			// Freeze current orientation
+			setArmPosition(getArmPosition());
+			setHandPosition(getHandPosition());
+
+			// TODO: Current this branch is really arm control
+			// with the hand orientation stabilized (intended for
+			// climbing attempt; however, it is more useful to
+			// have as a manual recovery mode so we need to
+			// consider hand, arm, and hand/arm manual modes
 			enableHandStabilization();
 			driveFactor = 0.5;
 	  }
@@ -349,6 +393,11 @@ task usercontrol()
 		}
 		else if (resetDump)
 		{
+			// TODO: Check for a timeout. See description TODO
+			// in the RESET_ARM_HAND command; summarily, if we
+			// are in the resetDump state for too long then
+			// we are probably hung on the fence.
+
 			resetDump = (abs(getHandPosition() - getHandCommand()) > 20.0);
 			if (! resetDump)
 			{
@@ -363,6 +412,24 @@ task usercontrol()
 			{
 				holdHandRelative = false;
 				disableHandStabilization();
+
+				// The following hand backoffs are intended
+				// to prevent the hand from snagging the fence
+				// during a reset; a sparate state is set up
+				// to wait for the hand to start moving in
+				// the desired direction.
+
+				// TODO: Add a timer to see how long the resetDump
+				// state has been running; if it has been running
+				// for more than a few seconds then we will need
+				// to enter a recovery mode that gets us off the
+				// fence; experience has shown that this recovery
+				// (executed manually) will cause the robot to
+				// tip upside-down; if added as automation then
+				// the robot will also need to move the arm/hand
+				// back to the original 0,0 (starting) position
+				// to let the driver/operator know that the
+				// recovery is complete
 				if (dumping == true)
 				{
 					resetDump = true;
@@ -417,11 +484,25 @@ task usercontrol()
 			}
 			else if (vexRT[DUMP])
 			{
+				// TODO: Need to replace lifting with liftComplete; i.e., we don't
+				// want to dump until we know that the arm is in the near-veritical
+				// position.
+			  // NOTE: Driver responsible for knowing when "safe" to dump
+			  // TODO: MAY also want to consider a bumper switch to detect proximity
+				// to fence... i.e., possibility that the dump too far from fence can
+			  // cause three different problems... tip, hang, or motor stall
 				if ((dumping == false)&&(lifting==true))
 				{
 					dumping = true;
 					holdHandRelative = false;
 					disableHandStabilization();
+
+					// NOTE: Hand is vertical if (hand + arm) = 0
+					// If (hand + arm) > 0 then hand is tipped to shallow/short side, thumb pointing down (greater risk of tipping)
+					// If (hand + arm) < 0 then hand is tipped to starting side, thumb pointing up
+
+					// TODO: Desired veritical + 70, but should really be based on current
+					// position to reach that goal, not current plus 70
 					float targetPosition_deg = getHandPosition() + 70.0;		// Based on geometry of fence if hand starts from vertical
 					if (targetPosition_deg > 0.0)
 					{
